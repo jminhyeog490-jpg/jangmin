@@ -8,10 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,6 +19,8 @@ public class PostController {
     private final PostService postService;
 
      //AuthenticationPrincipal 어노테이션을 통해 SecurityContext에서 로그인된 유저 정보를 가져옵니다
+
+    //게시글 생성
     @PostMapping("/create")
 
     public ResponseEntity<String> createPost(
@@ -37,6 +37,20 @@ public class PostController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body("게시글이 성공적으로 등록되었습니다.");
     }
+
+    //게시글 삭제
+    @PostMapping("/{id}")
+
+    public ResponseEntity<String> deletePoset (@PathVariable Long id) {
+
+        postService.deletePost(id);
+        return ResponseEntity.ok("삭제성공");
+
+
+    }
+
+
+
 
 
 

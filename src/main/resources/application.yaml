@@ -6,7 +6,7 @@ spring:
     name: jangmin
 
   datasource:
-    url: jdbc:mysql://localhost:3306/jang
+    url: jdbc:mysql://localhost:3306/jangmin
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: 12345
