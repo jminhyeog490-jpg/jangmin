@@ -8,21 +8,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // PROTECTED 이상만 접근가능 new User처럼 아무런 객체 없이 접근하는것을 차단
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Table(name ="posts")
 public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-
     private Long id;
 
     @Column(nullable = false , length = 30)
     public String title;
 
     @Column(nullable = false , length = 200)
-
     public String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -34,7 +32,11 @@ public class Post {
         this.title = title;
         this.content = content;
         this.user = user;
+    }
 
-
+    // 게시글 수정 메서드
+    public void update(String title, String content) {
+        this.title = title;
+        this.content = content;
     }
 }

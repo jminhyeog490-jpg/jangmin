@@ -44,6 +44,12 @@ public class User {
         this.role = role;
     }
 
+    //닉네임 변경
+
+    public void updateNickname(String newNickname){
+        this.nickname = newNickname;
+    }
+
 
 
 
