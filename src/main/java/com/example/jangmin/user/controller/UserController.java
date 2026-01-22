@@ -50,12 +50,13 @@ public class UserController {
     }
 
     //닉네임 변경
-    @PutMapping ("/updateNickname")
-    public ResponseEntity<String> updateNickname(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody String newNickname // 실제로는 DTO를 쓰는 것이 좋습니다
-    ) {
-        userService.updateNickname(userDetails.getUsername(), newNickname);
-        return ResponseEntity.ok("닉네임이 변경되었습니다.");
+    @PatchMapping("/nickname")
+    public ResponseEntity<User> updateNickname(@RequestBody UserCreateDto userCreateDto) {
+        // 서비스 호출하여 닉네임 변경 실행
+        User updatedUser = userService.updateNickname(userCreateDto);
+
+        // 변경된 사용자 정보와 함께 200 OK 응답 반환
+        return ResponseEntity.ok(updatedUser);
     }
 }
+

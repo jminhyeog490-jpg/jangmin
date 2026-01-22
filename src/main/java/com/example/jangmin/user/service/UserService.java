@@ -3,6 +3,7 @@ package com.example.jangmin.user.service;
 import com.example.jangmin.user.domain.User;
 import com.example.jangmin.user.domain.UserRole;
 import com.example.jangmin.user.dto.UserCreateDto;
+import com.example.jangmin.user.dto.UserUpdateNicknameDto;
 import com.example.jangmin.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,14 +38,11 @@ public class UserService {
     }
 
     //닉네임 변경
-    public User updateNickname(String username, String newNickname) {
-        User user = userRepository.findByUsername(username)
+    public User updateNickname(UserCreateDto userCreateDto) {
+        User user = userRepository.findByUsername(userCreateDto.username())
                 .orElseThrow(() -> new IllegalArgumentException("사용자가 존재하지 않습니다."));
-       return user.updateNickname(newNickname);
 
-
+        user.updateNickname(userCreateDto.nickname());
+        return user;
     }
-
-
-
 }
