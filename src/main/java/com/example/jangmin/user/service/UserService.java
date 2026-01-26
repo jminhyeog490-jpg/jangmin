@@ -3,7 +3,7 @@ package com.example.jangmin.user.service;
 import com.example.jangmin.user.domain.User;
 import com.example.jangmin.user.domain.UserRole;
 import com.example.jangmin.user.dto.UserCreateDto;
-import com.example.jangmin.user.dto.UserUpdateNicknameDto;
+
 import com.example.jangmin.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
