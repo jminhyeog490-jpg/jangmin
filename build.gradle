@@ -35,6 +35,14 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // 1. WebSocket & STOMP (채팅 핵심 라이브러리)
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // 2. Swagger / OpenAPI (API 문서화)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+
+    // 3. JSON 처리를 위한 라이브러리 (보통 web starter에 포함되어 있지만 명시적으로 채팅 시 유용)
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
 
 
 }

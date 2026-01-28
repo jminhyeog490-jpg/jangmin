@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // CSRF 비활성화
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/signup", "/api/users/login", "/").permitAll()
+                        .requestMatchers("/api/users/signup", "/api/users/login", "/","/ws-chat/**").permitAll()
                         .anyRequest().authenticated()
                 )
 
