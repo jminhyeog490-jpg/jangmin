@@ -1,8 +1,9 @@
 package com.example.jangmin.comment.controller;
 
+import com.example.jangmin.comment.dto.CommentCreateDto;
 import com.example.jangmin.comment.dto.CommentResponseDto;
 import com.example.jangmin.comment.service.CommentService;
-import com.example.jangmin.global.CustomUserDetails; // 작성하신 클래스 임포트
+import com.example.jangmin.global.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,24 +19,22 @@ public class CommentController {
     private final CommentService commentService;
 
     /**
-     * 댓글 생성
-     * @AuthenticationPrincipal을 통해 로그인된 유저 정보를 바로 가져옵니다.
+     * 댓글 작성 (대댓글 포함)
      */
     @PostMapping
     public ResponseEntity<CommentResponseDto> createComment(
             @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody String content) {
+            @RequestBody CommentCreateDto createDto) {
 
-        // CustomUserDetails에 만든 getUser() 메서드를 사용하여 엔티티의 ID를 꺼냅니다.
         Long userId = userDetails.getUser().getId();
 
-        CommentResponseDto response = commentService.createComment(postId, userId, content);
+        CommentResponseDto response = commentService.createComment(postId, userId, createDto);
         return ResponseEntity.ok(response);
     }
 
     /**
-     * 특정 게시글의 모든 댓글 조회
+     * 특정 게시글의 모든 댓글 조회 (계층형)
      */
     @GetMapping("/list")
     public ResponseEntity<List<CommentResponseDto>> getComments(@PathVariable Long postId) {

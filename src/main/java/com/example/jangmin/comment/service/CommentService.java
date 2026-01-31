@@ -1,5 +1,6 @@
 package com.example.jangmin.comment.service;
 
+import com.example.jangmin.comment.dto.CommentCreateDto;
 import com.example.jangmin.comment.dto.CommentResponseDto;
 import com.example.jangmin.comment.repository.CommentRepository;
 import com.example.jangmin.comment.domain.Comment;
@@ -24,20 +25,27 @@ public class CommentService {
     private final UserRepository userRepository;
 
     /**
-     * 댓글 작성
+     * 댓글 작성 (대댓글 포함)
      */
     @Transactional
-    public CommentResponseDto createComment(Long postId, Long userId, String content) {
+    public CommentResponseDto createComment(Long postId, Long userId, CommentCreateDto createDto) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + postId));
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 사용자가 존재하지 않습니다. id=" + userId));
 
+        Comment parent = null;
+        if (createDto.parentId() != null) {
+            parent = commentRepository.findById(createDto.parentId())
+                    .orElseThrow(() -> new IllegalArgumentException("부모 댓글이 존재하지 않습니다. id=" + createDto.parentId()));
+        }
+
         Comment comment = Comment.builder()
-                .content(content)
+                .content(createDto.content())
                 .post(post)
                 .user(user)
+                .parent(parent)
                 .build();
 
         commentRepository.save(comment);
@@ -46,13 +54,16 @@ public class CommentService {
     }
 
     /**
-     * 특정 게시글의 모든 댓글 조회
+     * 특정 게시글의 댓글 조회 (계층형 구조)
      */
     public List<CommentResponseDto> getCommentsByPost(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + postId));
 
+        // 모든 댓글을 가져온 후, 부모가 없는 최상위 댓글만 필터링해서 DTO로 변환
+        // (자식 댓글은 DTO 내부에서 재귀적으로 변환됨)
         return commentRepository.findAllByPost(post).stream()
+                .filter(comment -> comment.getParent() == null)
                 .map(CommentResponseDto::from)
                 .collect(Collectors.toList());
     }

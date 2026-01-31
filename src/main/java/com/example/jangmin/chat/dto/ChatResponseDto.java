@@ -17,8 +17,8 @@ public record ChatResponseDto(
                 message.getId(),
                 message.getContent(),
                 message.getSender() != null ? message.getSender().getUsername() : "알 수 없음",
-                message.getRoomId(),
-                message.getCreatedAt() // BaseEntity에서 상속받은 생성 시간
+                message.getChatRoom().getId(), // 변경된 부분
+                message.getCreatedAt()
         );
-}
+    }
 }

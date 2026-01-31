@@ -22,13 +22,14 @@ public class ChatMessage extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User sender; // 발신자
 
-    @Column(nullable = false)
-    private Long roomId; // 채팅방 ID (간단하게 구현 시)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_room_id")
+    private ChatRoom chatRoom; // 채팅방
 
     @Builder
-    public ChatMessage(String content, User sender, Long roomId) {
+    public ChatMessage(String content, User sender, ChatRoom chatRoom) {
         this.content = content;
         this.sender = sender;
-        this.roomId = roomId;
+        this.chatRoom = chatRoom;
     }
 }
