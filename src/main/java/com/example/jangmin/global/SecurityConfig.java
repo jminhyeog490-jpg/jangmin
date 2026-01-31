@@ -1,17 +1,29 @@
 package com.example.jangmin.global;
 
-import jakarta.servlet.http.HttpServletResponse;
+import com.example.jangmin.global.jwt.JwtAuthenticationFilter;
+import com.example.jangmin.global.jwt.JwtUtil;
+import com.example.jangmin.user.service.CustomUserDetailsService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService userDetailsService;
+
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
@@ -22,43 +34,16 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable()) // CSRF 비활성화
-
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 세션 미사용
+                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/signup", "/api/users/login", "/","/ws-chat/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/users/signup","api/auth/login", "/ws-chat/**", "/*.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
-
-                .formLogin(form -> form
-                        .loginProcessingUrl("/api/users/login")
-                        .usernameParameter("username")
-                        .passwordParameter("password")
-                        .successHandler((request, response, authentication) -> {
-                            response.setStatus(HttpServletResponse.SC_OK);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\": \"로그인 성공\"}");
-                        })
-                        .failureHandler((request, response, exception) -> {
-                            // 에러 원인을 콘솔에 출력
-                            System.out.println("로그인 실패 원인: " + exception.getMessage());
-                            
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\": \"로그인 실패: " + exception.getMessage() + "\"}");
-                        })
-                        .permitAll()
-                )
-
-                .logout(logout -> logout
-                        .logoutUrl("/api/users/logout")
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
-                        .logoutSuccessHandler((request, response, authentication) -> {
-                            response.setStatus(HttpServletResponse.SC_OK);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\": \"로그아웃 성공\"}");
-                        })
-                );
-
+                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class);
+                                    //JwtAuthenticationFilter 토큰 사용을 위한 것
+                                    // UsernamePasswordAuthenticationFilter 시큐리티에서는 아이디 비번 가져오라함 그렇기에 필요 하지만 이놈이 앞에 토큰으로 검증 끝났네 하고 넘김
         return http.build();
     }
 }
