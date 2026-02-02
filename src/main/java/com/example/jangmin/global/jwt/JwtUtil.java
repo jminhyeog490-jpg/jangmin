@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
+import java.time.Duration;
 
 @Slf4j
 @Component
@@ -19,6 +20,7 @@ public class JwtUtil {
     // 비밀키는 최소 32byte 이상이어야 합니다. (임시 키)
     private static final String SECRET_KEY = "jangminProjectSecretKeyForJwtTokenGenerationMustBeLongEnough";
     private static final long TOKEN_TIME = 60 * 60 * 1000L; // 1시간
+    private static final long REFRESH_TOKEN_TIME = 7 * 24 * 60 * 60 * 1000L; // 7일
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String BEARER_PREFIX = "Bearer ";
 
@@ -43,8 +45,18 @@ public class JwtUtil {
                         .setIssuedAt(date) // 발급일
                         .signWith(key, signatureAlgorithm) // 암호화 알고리즘
                         .compact();
+    }
 
+    // 리프레시 토큰 생성
+    public String createRefreshToken(String username) {
+        Date date = new Date();
 
+        return Jwts.builder()
+                .setSubject(username) // 사용자 식별자값(ID)
+                .setExpiration(new Date(date.getTime() + REFRESH_TOKEN_TIME)) // 만료 시간
+                .setIssuedAt(date) // 발급일
+                .signWith(key, signatureAlgorithm) // 암호화 알고리즘
+                .compact();
     }
 
     // 헤더에서 토큰 가져오기
@@ -76,5 +88,9 @@ public class JwtUtil {
     // 토큰에서 사용자 정보 가져오기
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+    }
+    
+    public Duration getRefreshTokenTimeToLive() {
+        return Duration.ofMillis(REFRESH_TOKEN_TIME);
     }
 }

@@ -4,7 +4,10 @@ server:
 spring:
   application:
     name: jangmin
-
+  data:        # spring 바로 아래 (공백 2칸)
+    redis:     # data 바로 아래 (공백 4칸)
+      host: localhost # redis 바로 아래 (공백 6칸)
+      port: 6379      # redis 바로 아래 (공백 6칸)
   datasource:
     url: jdbc:mysql://localhost:3306/jangmin
     driver-class-name: com.mysql.cj.jdbc.Driver
