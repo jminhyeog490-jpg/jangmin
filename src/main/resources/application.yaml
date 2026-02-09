@@ -4,15 +4,18 @@ server:
 spring:
   application:
     name: jangmin
-  data:        # spring 바로 아래 (공백 2칸)
-    redis:     # data 바로 아래 (공백 4칸)
-      host: localhost # redis 바로 아래 (공백 6칸)
-      port: 6379      # redis 바로 아래 (공백 6칸)
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
   datasource:
     url: jdbc:mysql://localhost:3306/jangmin
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: 12345
+    password: "12345"
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -20,3 +23,21 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: jminhyeog490@gmail.com
+
+    password: qqpcvkoajflykmww  # 띄어쓰기 없는지 다시 확인!
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+    logging:
+      level:
+        org.springframework: DEBUG
+        com.example.jangmin: DEBUG

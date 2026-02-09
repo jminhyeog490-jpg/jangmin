@@ -35,8 +35,11 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    //메일 인증
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
     // 1. WebSocket & STOMP (채팅 핵심 라이브러리)
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
 
     // 2. Swagger / OpenAPI (API 문서화)
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'

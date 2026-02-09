@@ -24,7 +24,10 @@ public record UserCreateDto(
 
         @Email
         @NotBlank(message = "이메일은 필수 입력 값입니다.")
-        String email
+        String email,
+
+        @NotBlank(message = "권한은 필수 입력 값입니다.")
+        String authCode
 )
 {
 

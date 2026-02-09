@@ -52,6 +52,7 @@ public class UserController {
     //닉네임 변경
     @PatchMapping("/nickname")
     public ResponseEntity<User> updateNickname(@RequestBody UserCreateDto userCreateDto) {
+
         // 서비스 호출하여 닉네임 변경 실행
         User updatedUser = userService.updateNickname(userCreateDto);
 
