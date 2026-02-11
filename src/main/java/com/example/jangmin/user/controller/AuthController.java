@@ -31,6 +31,7 @@ public class AuthController {
         return ResponseEntity.ok("로그아웃 성공");
     }
 
+
     // 3. 토큰 재발급
     @PostMapping("/reissue")
     public ResponseEntity<TokenResponseDto> reissue(@RequestHeader("Authorization") String refreshToken) {
