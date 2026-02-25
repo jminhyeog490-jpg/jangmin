@@ -38,7 +38,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 세션 미사용
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/users/signup","/api/auth/login" , "/*.html", "/swagger-ui/**", "/v3/api-docs/**","/email-send/**","/api/v1/landmarks/**","/ws-chat/**","/api/posts/**").permitAll()
+                        .requestMatchers("/api/auth/**","/api/v1/ai/**", "/api/users/signup","/api/auth/login" , "/*.html", "/swagger-ui/**", "/v3/api-docs/**","/email-send/**","/api/v1/landmarks/**","/ws-chat/**","/api/posts/**").permitAll()
                         //인증(로그인)이 반드시 필요한 '보호' 경로
 
                         .anyRequest().authenticated()
