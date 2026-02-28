@@ -41,3 +41,8 @@ spring:
       level:
         org.springframework: DEBUG
         com.example.jangmin: DEBUG
+
+  ai:
+    groq:
+      api-key: ${GROQ_API_KEY}
+      url: ${GROQ_URL}
