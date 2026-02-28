@@ -1,12 +1,13 @@
 package com.example.jangmin.post.domain;
 
+import com.example.jangmin.comment.domain.Comment; // 🟢 Comment 엔티티 임포트
 import com.example.jangmin.global.BaseEntity;
 import com.example.jangmin.user.domain.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -28,8 +29,12 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
+    // 🟢 1. 댓글 리스트 필드 추가 (이게 없어서 안 떴던 것임!)
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Comment> comments = new ArrayList<>();
+
     @Builder
-    public Post(String title,String content, User user){
+    public Post(String title, String content, User user){
         this.title = title;
         this.content = content;
         this.user = user;

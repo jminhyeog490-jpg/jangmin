@@ -1,124 +1,119 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import SignUpPage from './pages/SignUpPage';
+import MainPage from './pages/MainPage';
+import BoardPage from './pages/BoardPage';
+import ChatPage from './pages/ChatPage';
+
+// 로그인 여부를 확인하는 간단한 함수
+const isAuthenticated = () => {
+    return localStorage.getItem('token') !== null;
+};
+
+// 로그인이 필요한 페이지를 감싸는 컴포넌트
+const PrivateRoute = ({ children }) => {
+    return isAuthenticated() ? children : <Navigate to="/login" />;
+};
+
+// 로그인하면 접근할 수 없는 페이지를 감싸는 컴포넌트
+const PublicRoute = ({ children }) => {
+    return !isAuthenticated() ? children : <Navigate to="/main" />;
+};
 
 function App() {
-  const [currentPos, setCurrentPos] = useState({ lat: 36.9103, lon: 127.1332 });
-  const [mapObj, setMapObj] = useState(null);
-
-  // UI 개선을 위한 추가 상태
-  const [aiResult, setAiResult] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const container = document.getElementById('map');
-    const options = {
-      center: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon),
-      level: 3
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        window.location.href = '/login'; // 새로고침하며 이동
     };
-    const kakaoMap = new window.kakao.maps.Map(container, options);
-    setMapObj(kakaoMap);
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude: lat, longitude: lon } = position.coords;
-        setCurrentPos({ lat, lon });
-        const myLoc = new window.kakao.maps.LatLng(lat, lon);
-        kakaoMap.setCenter(myLoc);
-        new window.kakao.maps.Marker({ map: kakaoMap, position: myLoc });
-      });
-    }
-  }, []);
+    return (
+        <Router>
+            <Header isAuthenticated={isAuthenticated()} onLogout={handleLogout} />
+            <Routes>
+                {/* 로그인/회원가입 경로는 로그인 안 한 사용자만 접근 가능 */}
+                <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+                <Route path="/signup" element={<PublicRoute><SignUpPage /></PublicRoute>} />
 
-  const handleAIRecommendation = () => {
-    setAiResult(null); // 이전 결과 초기화
-    setIsLoading(true); // 로딩 시작
+                {/* 메인, 게시판, 채팅 경로는 로그인한 사용자만 접근 가능 */}
+                <Route path="/main" element={<PrivateRoute><MainPage /></PrivateRoute>} />
+                <Route path="/board" element={<PrivateRoute><BoardPage /></PrivateRoute>} />
+                <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
 
-    const ps = new window.kakao.maps.services.Places();
+                {/* 기본 경로는 로그인 상태에 따라 리다이렉트 */}
+                <Route path="/" element={<Navigate to={isAuthenticated() ? "/main" : "/login"} />} />
 
-    ps.keywordSearch('맛집', async (data, status) => {
-      if (status === window.kakao.maps.services.Status.OK) {
-        const placeNames = data.slice(0, 5).map(p => `${p.place_name}(${p.category_name})`).join(", ");
-
-        try {
-          const response = await axios.post(`http://localhost:8090/api/v1/ai/recommend`, {
-            currentLocation: currentPos,
-            places: placeNames,
-            userQuery: "주변 랜드마크와 맛집을 분석해서 깔끔하게 추천해줘"
-          });
-
-          // 결과 저장
-          setAiResult(response.data.answer);
-        } catch (err) {
-          console.error(err);
-          alert("AI 서버 연결 실패! 보안 설정(CORS)이나 경로를 확인하세요.");
-        } finally {
-          setIsLoading(false); // 로딩 종료
-        }
-      } else {
-        setIsLoading(false);
-        alert("주변 장소 정보를 가져오지 못했습니다.");
-      }
-    }, { location: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon), radius: 1000 });
-  };
-
-  return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      {/* 상단 버튼 바 */}
-      <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 100, display: 'flex', gap: '10px' }}>
-        <button onClick={handleAIRecommendation} style={buttonStyle("#4285F4", "white")}>
-          {isLoading ? "🤖 분석 중..." : "✨ AI 주변 추천"}
-        </button>
-        <button onClick={() => alert("현재 위치 저장 기능")} style={buttonStyle("#fee500", "black")}>
-          📍 내 위치 저장
-        </button>
-      </div>
-
-      {/* AI 추천 결과 카드 (결과가 있을 때만 표시) */}
-      {aiResult && (
-        <div style={resultCardStyle}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', color: '#4285F4' }}>🤖 AI 가이드 추천</div>
-          <div style={{ fontSize: '14px', lineHeight: '1.6', color: '#333', whiteSpace: 'pre-wrap' }}>
-            {aiResult}
-          </div>
-          <button onClick={() => setAiResult(null)} style={closeButtonStyle}>닫기</button>
-        </div>
-      )}
-
-      {/* 로딩 애니메이션 (선택사항) */}
-      {isLoading && (
-        <div style={loaderOverlayStyle}>
-          <div className="spinner">데이터 분석 중...</div>
-        </div>
-      )}
-
-      <div id="map" style={{ width: '100%', height: '100%' }}></div>
-    </div>
-  );
+                {/* 일치하는 경로가 없을 때 */}
+                <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+        </Router>
+    );
 }
 
-// --- 스타일 정의 ---
-const buttonStyle = (bg, color) => ({
-  padding: '12px 20px', backgroundColor: bg, color: color, border: 'none', borderRadius: '30px',
-  fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', transition: 'all 0.3s'
-});
+// 모든 페이지 상단에 표시될 헤더
+const Header = ({ isAuthenticated, onLogout }) => {
+    // MainPage에는 자체 헤더가 있으므로 렌더링하지 않음
+    const location = window.location.pathname;
+    if (location === '/main') {
+        return null;
+    }
 
-const resultCardStyle = {
-  position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
-  zIndex: 101, width: '90%', maxWidth: '400px', padding: '20px',
-  backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)',
-  borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-  border: '1px solid #eee'
+    return (
+        <nav style={styles.header}>
+            <Link to="/" style={styles.logo}>Jangmin App</Link>
+            <div>
+                {isAuthenticated ? (
+                    <>
+                        <Link to="/main" style={styles.navLink}>지도</Link>
+                        <Link to="/board" style={styles.navLink}>게시판</Link>
+                        <Link to="/chat" style={styles.navLink}>채팅</Link>
+                        <button onClick={onLogout} style={styles.logoutButton}>로그아웃</button>
+                    </>
+                ) : (
+                    <>
+                        <Link to="/login" style={styles.navLink}>로그인</Link>
+                        <Link to="/signup" style={styles.navLink}>회원가입</Link>
+                    </>
+                )}
+            </div>
+        </nav>
+    );
 };
 
-const closeButtonStyle = {
-  marginTop: '15px', width: '100%', padding: '8px', backgroundColor: '#eee',
-  border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold'
-};
-
-const loaderOverlayStyle = {
-  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-  backgroundColor: 'rgba(0,0,0,0.1)', zIndex: 102, display: 'flex',
-  justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold'
+const styles = {
+    header: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0 20px',
+        height: '60px',
+        backgroundColor: 'white',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+    },
+    logo: {
+        fontWeight: 'bold',
+        fontSize: '20px',
+        color: '#333',
+        textDecoration: 'none',
+    },
+    navLink: {
+        marginLeft: '20px',
+        textDecoration: 'none',
+        color: '#555',
+        fontWeight: '500',
+    },
+    logoutButton: {
+        marginLeft: '20px',
+        padding: '8px 15px',
+        backgroundColor: '#ff4d4f',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+    }
 };
 
 export default App;
