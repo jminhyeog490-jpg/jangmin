@@ -21,7 +21,7 @@ public class LandmarkController {
             @RequestParam Double lon) {
         return ResponseEntity.ok(landmarkService.getNearbyLandmarks(lat, lon));
     }
-    // ✨ 리액트의 '저장 목록' 버튼을 위해 모든 데이터를 가져오는 API 추가
+    // 리액트의 '저장 목록' 버튼을 위해 모든 데이터를 가져오는 API 추가
     @GetMapping
     public ResponseEntity<List<LandmarkResponseDto>> getAllLandmarks() {
         // 서비스에 모든 랜드마크를 가져오는 메서드가 있어야 합니다.

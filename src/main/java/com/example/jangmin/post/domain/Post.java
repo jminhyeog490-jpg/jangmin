@@ -29,7 +29,7 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
-    // 🟢 1. 댓글 리스트 필드 추가 (이게 없어서 안 떴던 것임!)
+    // 1. 댓글 리스트 필드 추가
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 

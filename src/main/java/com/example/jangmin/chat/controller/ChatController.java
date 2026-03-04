@@ -62,7 +62,7 @@ public class ChatController {
     // --- WebSocket (메시지 전송) ---
 
     /**
-     * 클라이언트가 /pub/chat/message 로 메시지를 보내면 호출됩니다.
+     * 클라이언트가 /pub/chat/message 로 메시지를 보내면 호출.
      */
     @MessageMapping("/chat/message")
     public void message(ChatCreateDto message) {

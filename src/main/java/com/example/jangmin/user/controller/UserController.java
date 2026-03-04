@@ -26,7 +26,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body("회원가입이 완료되었습니다.");
     }
 
-    // 로그인(/api/users/login)과 로그아웃(/api/users/logout)은 SecurityConfig에서 처리합니다.
+
 
     // 사용자 조회 (로그인된 사용자만 가능)
     @GetMapping("/find")

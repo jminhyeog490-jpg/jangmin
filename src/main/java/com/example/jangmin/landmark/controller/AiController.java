@@ -17,7 +17,7 @@ import java.util.Map;
 public class AiController {
 
 
-    // 🟢 Groq Cloud에서 발급받은 API 키 (https://console.groq.com/keys)
+    // Groq Cloud에서 발급받은 API 키 (https://console.groq.com/keys)
     @Value("${ai.groq.api-key}")
     private String groqApiKey;
 

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
-//사용자한테 받아오시
+
 @Builder
 public record UserCreateDto(
         @NotBlank(message = "아이디는 필수 입력 값입니다.")

@@ -16,7 +16,7 @@ public class CustomUserDetails implements UserDetails {
         this.user = user;
     }
 
-    // [참고] 나중에 컨트롤러에서 유저 PK나 닉네임이 필요하면 꺼내 쓸 수 있도록 추가
+    // 나중에 컨트롤러에서 유저 PK나 닉네임이 필요하면 꺼내 쓸 수 있도록 추가
     public User getUser() {
         return user;
     }
