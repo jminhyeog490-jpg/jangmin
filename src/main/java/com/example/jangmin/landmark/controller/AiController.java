@@ -17,12 +17,11 @@ import java.util.Map;
 public class AiController {
 
 
-    // Groq Cloud에서 발급받은 API 키 (https://console.groq.com/keys)
-    @Value("${ai.groq.api-key}")
-    private String groqApiKey;
+    // 발급받은 gsk_ 로 시작하는 키를 아래에 넣으세요
+    String groqApiKey = System.getenv("GROQ_API_KEY");
 
-    @Value("${ai.groq.url}")
-    private String groqUrl;
+    // 엔드포인트는 이 주소를 그대로 유지하시면 됩니다
+    private final String groqUrl = "https://api.groq.com/openai/v1/chat/completions";
     @PostMapping("/recommend")
     public ResponseEntity<?> getAiRecommend(@RequestBody Map<String, Object> request) {
         String userPrompt = (String) request.get("userQuery"); // 리액트에서 보낸 사용자의 질문

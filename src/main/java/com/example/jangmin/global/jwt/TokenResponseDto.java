@@ -1,13 +1,12 @@
 package com.example.jangmin.global.jwt;
 
 import lombok.Builder;
-import lombok.Getter;
 
-@Getter
 @Builder
-public class TokenResponseDto {
-    private String grantType;      // 보통 "Bearer"라고 보냅니다.
-    private String accessToken;
-    private String refreshToken;
-    private Long accessTokenExpiresIn; // 액세스 토큰 만료 시간 (밀리초)
-}
+public record TokenResponseDto(
+        String grantType,
+        String accessToken,
+        String refreshToken,
+        Long accessTokenExpiresIn,
+        Long userId // ✨ 이 필드를 추가해야 builder().userId()가 작동합니다.
+) {}

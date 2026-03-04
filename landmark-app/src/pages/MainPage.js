@@ -139,10 +139,10 @@ function MainPage() {
             {isLoading ? "🤖 분석 중..." : "✨ AI 추천받기"}
           </button>
           <button onClick={handleSaveLocation} style={buttonStyle("#fee500", "black")}>
-            📍 내 위치 저장
+            📍 추천하기
           </button>
           <button onClick={fetchAndShowSavedLandmarks} style={buttonStyle("#34a853", "white")}>
-            📚 저장 목록
+            📚 추천 목록
           </button>
         </div>
       </div>
@@ -150,7 +150,7 @@ function MainPage() {
       {showSaved && (
         <div style={sidebarStyle}>
           <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
-            <strong style={{fontSize:'16px'}}>내 저장 목록</strong>
+            <strong style={{fontSize:'16px'}}>추천 목록</strong>
             <button onClick={()=>setShowSaved(false)} style={{border:'none', background:'none', cursor:'pointer'}}>X</button>
           </div>
           <div style={{overflowY:'auto', maxHeight:'80vh'}}>
