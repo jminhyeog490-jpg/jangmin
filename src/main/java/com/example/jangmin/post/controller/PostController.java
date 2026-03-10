@@ -56,7 +56,7 @@ PostController {
     }
 
     //게시글 삭제
-    @DeleteMapping("/{id}") // PostMapping -> DeleteMapping으로 변경 권장
+    @DeleteMapping("/{id}")
     public ResponseEntity<String> deletePost(@PathVariable Long id) {
         postService.deletePost(id);
         return ResponseEntity.ok("삭제성공");
@@ -71,7 +71,7 @@ PostController {
 
     //게시글 전체 조회
     @GetMapping("/list")
-    public ResponseEntity<List<PostResponseDto>> getAllPost() { // @PathVariable 제거
+    public ResponseEntity<List<PostResponseDto>> getAllPost() {
         List<PostResponseDto> responseDto = postService.getAllPosts();
         return ResponseEntity.ok(responseDto);
     }

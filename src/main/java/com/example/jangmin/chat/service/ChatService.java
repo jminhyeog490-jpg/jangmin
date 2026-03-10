@@ -28,9 +28,7 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
 
-    /**
-     * 채팅방 생성
-     */
+    // 채팅방 생성
     @Transactional
     public ChatRoomDto createRoom(String title, Long userId) {
         User user = userRepository.findById(userId)
@@ -43,15 +41,12 @@ public class ChatService {
 
         chatRoomRepository.save(chatRoom);
         
-        // 방장도 멤버로 추가
         enterRoom(chatRoom.getId(), userId);
 
         return ChatRoomDto.from(chatRoom);
     }
 
-    /**
-     * 채팅방 입장 (멤버 추가)
-     */
+    // 채팅방 입장
     @Transactional
     public void enterRoom(Long roomId, Long userId) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
@@ -59,7 +54,6 @@ public class ChatService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // 이미 참여 중인지 확인
         if (chatRoomMemberRepository.findByChatRoomAndUser(chatRoom, user).isPresent()) {
             return;
         }
@@ -72,9 +66,7 @@ public class ChatService {
         chatRoomMemberRepository.save(member);
     }
 
-    /**
-     * 채팅 메시지 저장
-     */
+    // 채팅 메시지 저장
     @Transactional
     public ChatResponseDto saveMessage(Long userId, ChatCreateDto chatCreateDto) {
         User user = userRepository.findById(userId)
@@ -83,7 +75,6 @@ public class ChatService {
         ChatRoom chatRoom = chatRoomRepository.findById(chatCreateDto.roomId())
                 .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
 
-        // 메시지 엔티티 생성 및 빌드
         ChatMessage chatMessage = ChatMessage.builder()
                 .content(chatCreateDto.content())
                 .chatRoom(chatRoom)
@@ -95,18 +86,14 @@ public class ChatService {
         return ChatResponseDto.from(chatMessage);
     }
 
-    /**
-     * 특정 방의 채팅 내역 조회
-     */
+    // 채팅 내역 조회
     public List<ChatResponseDto> getChatMessages(Long roomId) {
         return chatRepository.findAllByChatRoomIdOrderByCreatedAtAsc(roomId).stream()
                 .map(ChatResponseDto::from)
                 .collect(Collectors.toList());
     }
     
-    /**
-     * 전체 채팅방 목록 조회
-     */
+    // 채팅방 목록 조회
     public List<ChatRoomDto> getAllRooms() {
         return chatRoomRepository.findAll().stream()
                 .map(ChatRoomDto::from)

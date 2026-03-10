@@ -24,14 +24,14 @@ public class LandmarkController {
     // 리액트의 '저장 목록' 버튼을 위해 모든 데이터를 가져오는 API 추가
     @GetMapping
     public ResponseEntity<List<LandmarkResponseDto>> getAllLandmarks() {
-        // 서비스에 모든 랜드마크를 가져오는 메서드가 있어야 합니다.
+        // 서비스에 모든 랜드마크를 가져오는 메서드가 있음
         return ResponseEntity.ok(landmarkService.getAllLandmarks());
     }
-    // LandmarkController.java
+
 
     @PostMapping("/register")
     public ResponseEntity<String> registerLandmark(@RequestBody LandmarkResponseDto landmarkDto) {
-        // 리액트에서 보낸 데이터를 DB에 저장하는 로직
+        // 리액트에서 보낸 데이터를 DB에 저장
         landmarkService.registerLandmark(landmarkDto);
         return ResponseEntity.ok("랜드마크 등록 성공!");
     }

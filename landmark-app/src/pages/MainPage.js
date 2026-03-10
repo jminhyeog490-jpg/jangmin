@@ -13,7 +13,7 @@ function MainPage() {
   const [showSaved, setShowSaved] = useState(false);
   const [markers, setMarkers] = useState([]);
 
-  // ✨ 추가: 리스트에서 클릭하여 선택된 장소 상태
+  // 선택된 장소
   const [selectedPlace, setSelectedPlace] = useState(null);
 
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ function MainPage() {
         });
 
         window.kakao.maps.event.addListener(marker, 'click', () => {
-          // 마커 클릭 시에도 상세 정보 표시
+          // 마커 클릭
           setSelectedPlace(place);
           setAiResult(null);
         });
@@ -74,7 +74,7 @@ function MainPage() {
     if (isLoading) return;
     const finalQuery = customPrompt.trim() || "주변 가볼만한 곳을 추천하고 각 장소의 특징을 설명해줘";
     setAiResult(null);
-    setSelectedPlace(null); // AI 추천 시 기존 선택 장소 닫기
+    setSelectedPlace(null);
     setIsLoading(true);
     const ps = new window.kakao.maps.services.Places();
     ps.keywordSearch('관광명소', async (data, status) => {
@@ -93,7 +93,7 @@ function MainPage() {
     }, { location: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon), radius: 2000 });
   };
 
-  // ✨ 길찾기 외부 링크 함수 업데이트 (장소 정보를 직접 받음)
+  // 길찾기
   const openRoute = (place) => {
     const url = `https://map.kakao.com/link/to/${place.name},${place.latitude},${place.longitude}`;
     window.open(url, '_blank');
@@ -158,7 +158,7 @@ function MainPage() {
               savedLandmarks.map(place => (
                 <div key={place.id} style={listItemStyle} onClick={() => {
                   mapObj.panTo(new window.kakao.maps.LatLng(place.latitude, place.longitude));
-                  setSelectedPlace(place); // ✨ 클릭 시 장소 정보 저장
+                  setSelectedPlace(place); // 장소 정보 저장
                   setAiResult(null); // AI 창 닫기
                 }}>
                   <div style={{fontWeight:'bold', fontSize:'14px'}}>{place.name}</div>
@@ -170,7 +170,7 @@ function MainPage() {
         </div>
       )}
 
-      {/* ✨ 추가: 저장된 장소 클릭 시 나타나는 정보 카드 */}
+      {/* 저장된 장소 정보 카드 */}
       {selectedPlace && (
         <div style={resultCardStyle}>
           <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#34a853' }}>📍 저장된 장소 정보</div>
@@ -205,7 +205,6 @@ function MainPage() {
   );
 }
 
-// ... 스타일은 기존과 동일 ...
 const actionButtonStyle = (bg, color) => ({ flex: 1, padding: '10px', backgroundColor: bg, color: color, border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' });
 const navBarStyle = { position: 'absolute', top: 0, left: 0, width: '100%', height: '60px', backgroundColor: 'white', zIndex: 1000, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', boxSizing: 'border-box' };
 const navLinkStyle = { textDecoration: 'none', color: '#333', fontWeight: 'bold' };

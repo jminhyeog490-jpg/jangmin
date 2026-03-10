@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface LandmarkRepository extends JpaRepository<Landmark, Long> {
 
-    // Native Query를 사용하지만 결과는 LandmarkProjection 인터페이스로 받습니다.
+    // Native Query를 사용하지만 결과는 LandmarkProjection 인터페이스로 받음
     @Query(value = "SELECT name, description, latitude, longitude, " +
             "(6371 * acos(cos(radians(:lat)) * cos(radians(latitude)) * " +
             "cos(radians(longitude) - radians(:lon)) + sin(radians(:lat)) * " +

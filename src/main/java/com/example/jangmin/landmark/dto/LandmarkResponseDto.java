@@ -6,13 +6,13 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @AllArgsConstructor
-@NoArgsConstructor // 👈 기본 생성자 추가 (JSON 변환용)
+@NoArgsConstructor
 public class LandmarkResponseDto {
-    private Long id;          // ✨ 추가: 식별자
+    private Long id;
     private String name;
     private String description;
     private Double latitude;
     private Double longitude;
-    private String address;    // ✨ 추가: 주소
+    private String address;
     private Double distance;   // 계산된 거리
 }

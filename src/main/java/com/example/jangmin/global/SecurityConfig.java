@@ -44,17 +44,17 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // JWT 사용을 위한 세션 미사용
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 1. 모든 사용자에게 허용할 경로들 (게시글 API 포함)
+                        //  모든 사용자에게 허용할 경로들 (게시글 API 포함)
                         .requestMatchers(
                                 "/api/auth/**", "/api/v1/ai/**", "/api/users/signup",
                                 "/api/auth/login", "/*.html", "/swagger-ui/**",
                                 "/v3/api-docs/**", "/email-send/**", "/api/v1/landmarks/**",
                                 "/ws-chat/**", "/api/posts/**"
                         ).permitAll()
-                        // 2. 그 외 모든 요청은 인증 필요
+                        // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
-                // 3. JWT 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
+                //  JWT 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -72,7 +72,7 @@ public class SecurityConfig {
         // 모든 헤더 허용
         configuration.setAllowedHeaders(List.of("*"));
 
-        // ⭐ 매우 중요: 리액트(브라우저)가 Authorization 헤더를 읽을 수 있도록 노출
+        //  리액트(브라우저)가 Authorization 헤더를 읽을 수 있도록 노출
         configuration.setExposedHeaders(List.of("Authorization"));
 
         // 쿠키/인증 정보 포함 허용

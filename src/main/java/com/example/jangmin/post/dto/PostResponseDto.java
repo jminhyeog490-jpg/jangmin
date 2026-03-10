@@ -1,7 +1,7 @@
 package com.example.jangmin.post.dto;
 
 import com.example.jangmin.post.domain.Post;
-import com.example.jangmin.comment.dto.CommentResponseDto; // 🟢 추가: 댓글 DTO 임포트
+import com.example.jangmin.comment.dto.CommentResponseDto;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -12,7 +12,6 @@ public record PostResponseDto(
         String content,
         String authorName,
         LocalDateTime createdAt,
-        //  1. 리액트에서 보여줄 댓글 리스트 필드 추가
         List<CommentResponseDto> comments
 ) {
     public static PostResponseDto from(Post post) {
@@ -22,9 +21,10 @@ public record PostResponseDto(
                 post.getContent(),
                 post.getUser() != null ? post.getUser().getUsername() : "알 수 없음",
                 post.getCreatedAt(),
-                // 2. Post 엔티티에 저장된 댓글들을 CommentResponseDto로 변환해서 담아주기
                 post.getComments() != null ?
                         post.getComments().stream()
+                                // 부모가 없는 댓글만 리스트 포함
+                                .filter(comment -> comment.getParent() == null)
                                 .map(CommentResponseDto::from)
                                 .collect(Collectors.toList()) : List.of()
         );

@@ -68,7 +68,6 @@ const BoardPage = () => {
 
     return (
         <div style={styles.container}>
-            {/* 🟢 고정 영역: 헤더와 게시글 작성 폼 */}
             <div style={styles.stickyHeader}>
                 <div style={styles.header}>
                     <h2>📋 자유 게시판</h2>
@@ -81,7 +80,6 @@ const BoardPage = () => {
                 </div>
             </div>
 
-            {/* 🟢 스크롤 영역: 게시글 목록 */}
             <div style={styles.scrollArea}>
                 <div style={styles.postList}>
                     {posts.map(post => (
@@ -94,31 +92,45 @@ const BoardPage = () => {
 
                             <div style={styles.commentSection}>
                                 <h4>댓글 ({post.comments ? post.comments.length : 0})</h4>
-                                {post.comments && post.comments.map(comment => (
-                                    <div key={comment.id} style={styles.commentItem}>
-                                        <div style={styles.commentMain}>
-                                            <strong>{comment.authorName}:</strong> {comment.content}
-                                            <button style={styles.replyButton} onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}>답글</button>
+
+                                {/* ✅ 수정됨: parentId가 없는 최상위 댓글만 먼저 렌더링 */}
+                                {post.comments && post.comments
+                                    .filter(comment => !comment.parentId)
+                                    .map(comment => (
+                                        <div key={comment.id} style={styles.commentItem}>
+                                            <div style={styles.commentMain}>
+                                                <strong>{comment.authorName}:</strong> {comment.content}
+                                                <button style={styles.replyButton} onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}>
+                                                    {activeReplyId === comment.id ? '취소' : '답글'}
+                                                </button>
+                                            </div>
+
+                                            {/* 답글 입력창 */}
+                                            {activeReplyId === comment.id && (
+                                                <div style={styles.replyInputWrapper}>
+                                                    <input
+                                                        style={styles.replyInput}
+                                                        placeholder="답글 입력 후 엔터..."
+                                                        value={replyInputs[comment.id] || ''}
+                                                        onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddReply(post.id, comment.id)}
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* 대댓글(자식) 출력 영역 */}
+                                            {comment.children && comment.children.map(child => (
+                                                <div key={child.id} style={styles.replyItem}>
+                                                    <span style={styles.replyArrow}>└</span>
+                                                    <strong>{child.authorName}:</strong> {child.content}
+                                                </div>
+                                            ))}
                                         </div>
-                                        {activeReplyId === comment.id && (
-                                            <div style={styles.replyInputWrapper}>
-                                                <input
-                                                    style={styles.replyInput}
-                                                    placeholder="답글 입력..."
-                                                    value={replyInputs[comment.id] || ''}
-                                                    onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleAddReply(post.id, comment.id)}
-                                                />
-                                            </div>
-                                        )}
-                                        {comment.children && comment.children.map(child => (
-                                            <div key={child.id} style={styles.replyItem}>
-                                                <span style={styles.replyArrow}>└</span>
-                                                <strong>{child.authorName}:</strong> {child.content}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ))}
+                                    ))
+                                }
+
+                                {/* 새 일반 댓글 입력창 */}
                                 <input
                                     type="text"
                                     placeholder="댓글 입력 후 엔터..."
@@ -138,13 +150,10 @@ const BoardPage = () => {
 
 const styles = {
     container: { height: '100vh', display: 'flex', flexDirection: 'column', maxWidth: '800px', margin: '0 auto', backgroundColor: '#fff' },
-    // 🟢 상단 고정을 위한 스타일
     stickyHeader: { padding: '20px', backgroundColor: '#fff', borderBottom: '2px solid #eee', zIndex: 10 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
     createForm: { padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px' },
-    // 🟢 스크롤이 발생하는 영역
     scrollArea: { flex: 1, overflowY: 'auto', padding: '20px' },
-
     backLink: { textDecoration: 'none', color: '#4285F4', fontWeight: 'bold' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' },
     textarea: { width: '100%', padding: '10px', height: '60px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' },
@@ -159,7 +168,7 @@ const styles = {
     commentMain: { display: 'flex', justifyContent: 'space-between', fontSize: '14px' },
     replyButton: { border: 'none', background: 'none', color: '#4285F4', cursor: 'pointer', fontSize: '12px' },
     replyInputWrapper: { marginLeft: '20px', marginTop: '5px' },
-    replyInput: { width: '100%', padding: '5px', borderRadius: '4px', border: '1px solid #eee' },
+    replyInput: { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', outline: 'none' },
     replyItem: { marginLeft: '20px', fontSize: '13px', color: '#666', marginTop: '5px' },
     replyArrow: { marginRight: '5px', color: '#4285F4' },
     commentInput: { width: '100%', padding: '8px', marginTop: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }

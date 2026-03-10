@@ -17,9 +17,9 @@ public class LandmarkService {
 
     private final LandmarkRepository landmarkRepository;
 
-    /**
-     * 1. 주변 랜드마크 조회 (거리 계산 포함)
-     */
+
+     // 주변 랜드마크 조회 (거리 계산 포함)
+
     public List<LandmarkResponseDto> getNearbyLandmarks(Double lat, Double lon) {
         List<LandmarkProjection> results = landmarkRepository.findNearbyLandmarks(lat, lon);
 
@@ -35,9 +35,7 @@ public class LandmarkService {
         )).collect(Collectors.toList());
     }
 
-    /**
-     * 2. 모든 랜드마크 조회 (리액트 '저장 목록' 버튼용)
-     */
+    //랜드마크 조회
     public List<LandmarkResponseDto> getAllLandmarks() {
         List<Landmark> landmarks = landmarkRepository.findAll();
 
@@ -52,26 +50,23 @@ public class LandmarkService {
         )).collect(Collectors.toList());
     }
 
-    /**
-     * 3. 새로운 랜드마크 등록
-     */
+    //랜드마크 등록
     @Transactional
     public void registerLandmark(LandmarkResponseDto dto) {
-        // Landmark 엔티티 클래스에 @Builder가 있어야 작동합니다.
         Landmark landmark = Landmark.builder()
                 .name(dto.getName())
                 .description(dto.getDescription())
                 .latitude(dto.getLatitude())
                 .longitude(dto.getLongitude())
-                .address(dto.getAddress()) // 주소 저장 추가
+                .address(dto.getAddress())
                 .build();
 
         landmarkRepository.save(landmark);
     }
 
-    /**
-     * 4. 특정 랜드마크 상세 조회
-     */
+
+    //  특정 랜드마크 상세 조회
+
     public LandmarkResponseDto getLandmarkDetail(Long id) {
         Landmark landmark = landmarkRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 랜드마크가 존재하지 않습니다. id=" + id));

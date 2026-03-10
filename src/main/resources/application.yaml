@@ -29,7 +29,7 @@ spring:
     port: 587
     username: jminhyeog490@gmail.com
 
-    password: qqpcvkoajflykmww  # 띄어쓰기 없는지 다시 확인!
+    password: qqpcvkoajflykmww
     properties:
       mail:
         smtp:
@@ -45,4 +45,4 @@ spring:
   ai:
     groq:
       api-key: ${GROQ_API_KEY}
-      url: ${GROQ_URL}
+

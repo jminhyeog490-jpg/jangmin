@@ -1,6 +1,6 @@
 package com.example.jangmin.global;
 
-import com.example.jangmin.user.domain.User; // 1. 우리 엔티티 유저를 임포트!
+import com.example.jangmin.user.domain.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -10,7 +10,7 @@ import java.util.Collections;
 
 public class CustomUserDetails implements UserDetails {
 
-    private final User user; // 이제 우리 프로젝트의 User 엔티티입니다.
+    private final User user;
 
     public CustomUserDetails(User user) {
         this.user = user;
@@ -33,7 +33,6 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // user.getRole()이 Enum인 경우 .name()을 사용합니다.
         return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
     }
 

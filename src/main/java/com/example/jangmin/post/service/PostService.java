@@ -61,16 +61,16 @@ public class PostService {
         postRepository.delete(post);
         return response;
     }
-
-    //게시글 단건 조회
+    // 게시글 단건 조회
     @Transactional(readOnly = true)
     public PostResponseDto getPost(Long id) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=" + id));
+
         return PostResponseDto.from(post);
     }
 
-    //게시글 전체 조회
+    // 게시글 전체 조회
     @Transactional(readOnly = true)
     public List<PostResponseDto> getAllPosts() {
         List<Post> posts = postRepository.findAll();

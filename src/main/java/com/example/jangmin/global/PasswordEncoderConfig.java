@@ -6,10 +6,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-@Configuration // 1. 설정 클래스임을 명시
+@Configuration // 설정 클래스임을 명시
 public class PasswordEncoderConfig {
 
-    @Bean // 2. 스프링 컨테이너에 빈으로 등록
+    @Bean // 스프링 컨테이너에 빈으로 등록
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }

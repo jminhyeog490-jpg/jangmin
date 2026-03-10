@@ -17,10 +17,10 @@ import java.util.Map;
 public class AiController {
 
 
-    // 발급받은 gsk_ 로 시작하는 키를 아래에 넣으세요
+    @Value("${GROQ_API_KEY}")
     String groqApiKey = System.getenv("GROQ_API_KEY");
 
-    // 엔드포인트는 이 주소를 그대로 유지하시면 됩니다
+
     private final String groqUrl = "https://api.groq.com/openai/v1/chat/completions";
     @PostMapping("/recommend")
     public ResponseEntity<?> getAiRecommend(@RequestBody Map<String, Object> request) {
@@ -39,12 +39,12 @@ public class AiController {
         headers.setBearerAuth(groqApiKey);
         // Groq/OpenAI 형식의 JSON 바디 구성
         Map<String, Object> body = Map.of(
-                "model", "llama-3.3-70b-versatile", // 성능이 좋은 최신 모델
+                "model", "llama-3.3-70b-versatile",
                 "messages", List.of(
                         Map.of("role", "system", "content", systemRole),
                         Map.of("role", "user", "content", userPrompt)
                 ),
-                "temperature", 0.7 // 답변의 창의성 조절
+                "temperature", 0.7 //창의성
         );
 
         try {

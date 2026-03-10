@@ -23,13 +23,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(errors); //저장
 
     }
-    // 2. 서비스 로직 예외 처리 (중복 아이디 등)
+    //  서비스 로직 예외 처리
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<String> handleIllegalStateException(IllegalStateException e) {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 
-    // 3. 그 외 예상치 못한 모든 예외
+    //  그 외 예상치 못한 모든 예외
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleAllExceptions(Exception e) {
         return ResponseEntity.internalServerError().body("서버 내부 오류가 발생했습니다.");
