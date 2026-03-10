@@ -21,6 +21,7 @@ public class AiController {
     String groqApiKey = System.getenv("GROQ_API_KEY");
 
 
+
     private final String groqUrl = "https://api.groq.com/openai/v1/chat/completions";
     @PostMapping("/recommend")
     public ResponseEntity<?> getAiRecommend(@RequestBody Map<String, Object> request) {
