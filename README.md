@@ -16,9 +16,9 @@
 ### 백엔드 (Spring Boot)
 *   **언어**: Java
 *   **프레임워크**: Spring Boot
-*   **데이터베이스**: (추정: H2, MySQL 등)
+*   **데이터베이스**:  MySQL 
 *   **API**: RESTful API
-*   **AI 연동**: (추정: 외부 AI 서비스 연동)
+*   **AI 연동**: 외부 AI 서비스 연동
 
 ### 프론트엔드 (React)
 *   **언어**: JavaScript
