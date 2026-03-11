@@ -93,7 +93,7 @@ const BoardPage = () => {
                             <div style={styles.commentSection}>
                                 <h4>댓글 ({post.comments ? post.comments.length : 0})</h4>
 
-                                {/* ✅ 수정됨: parentId가 없는 최상위 댓글만 먼저 렌더링 */}
+
                                 {post.comments && post.comments
                                     .filter(comment => !comment.parentId)
                                     .map(comment => (

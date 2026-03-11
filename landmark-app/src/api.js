@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Axios 인스턴스 생성
 const apiClient = axios.create({
-    baseURL: 'http://localhost:8090', // 백엔드 서버 주소
+    baseURL: 'http://localhost:8090',
+     'https:https://master.d20nn13pyj5sjm.amplifyapp.com
 });
 
 // 요청 인터셉터 (Request Interceptor)
