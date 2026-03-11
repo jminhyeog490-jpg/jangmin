@@ -13,14 +13,14 @@
 
 ##  기술 스택
 
-### 백엔드 (Spring Boot)
+### 백엔드 
 *   **언어**: Java
 *   **프레임워크**: Spring Boot
-*   **데이터베이스**: (추정: H2, MySQL 등)
+*   **데이터베이스**:  MySQL 
 *   **API**: RESTful API
-*   **AI 연동**: (추정: 외부 AI 서비스 연동)
+*   **AI 연동**: 외부 AI 서비스 연동
 
-### 프론트엔드 (React)
+### 프론트엔드 
 *   **언어**: JavaScript
 *   **프레임워크/라이브러리**: React.js
 *   **지도 API**: Kakao Map API
