@@ -23,7 +23,7 @@ const SignUpPage = () => {
         }
         try {
             // 백엔드 API 호출 (POST /api/auth/email-send?email=...)
-            await axios.post(`http://localhost:8090/api/auth/email-send?email=${email}`);
+           await axios.post(`http://52.79.237.156:8090/api/auth/email-send?email=${email}`);
             alert("인증번호가 이메일로 전송되었습니다. 확인해주세요.");
             setIsEmailSent(true);
         } catch (error) {
@@ -40,7 +40,7 @@ const SignUpPage = () => {
         }
         try {
             // 백엔드 API 호출 (POST /api/auth/email-verify?email=...&code=...)
-            await axios.post(`http://localhost:8090/api/auth/email-verify?email=${email}&code=${verificationCode}`);
+            await axios.post(`http://52.79.237.156:8090/api/auth/email-verify?email=${email}&code=${verificationCode}`);
             alert("이메일 인증이 완료되었습니다!");
             setIsEmailVerified(true);
         } catch (error) {
@@ -68,14 +68,14 @@ const SignUpPage = () => {
             return;
         }
 
-        try {
-            const response = await axios.post('http://localhost:8090/api/users/signup', {
-                username: username,
-                password: password,
-                nickname: nickname,
-                email: email,
-                authCode: "VERIFIED_USER" // 인증 완료된 사용자임을 표시 (백엔드 로직에 따라 수정 필요할 수 있음)
-            });
+   try {
+       const response = await axios.post('http://52.79.237.156:8090/api/users/signup', {
+           username: username,
+           password: password,
+           nickname: nickname,
+           email: email,
+           authCode: "VERIFIED_USER"
+       });
 
             if (response.status === 200 || response.status === 201) {
                 alert('회원가입이 완료되었습니다! 로그인해주세요.');
