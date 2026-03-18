@@ -52,7 +52,7 @@ const LoginPage = () => {
         <div style={styles.container}>
             <div style={styles.formContainer}>
                 <h2 style={styles.title}>로그인</h2>
-                {/* 🔴 아래 onSubmit 부분을 확인하세요! */}
+                {}
                 <form onSubmit={handleLogin}>
                     <div style={styles.inputGroup}>
                         <label htmlFor="username" style={styles.label}>아이디</label>
