@@ -113,7 +113,34 @@ function MainPage() {
     } catch (error) { alert("❌ 저장 실패"); }
   };
 
-  const handleLogout = () => { localStorage.removeItem('token'); navigate('/login'); };
+ const handleLogout = async () => {
+   const token = localStorage.getItem('token');
+
+   if (!token) {
+     alert("로그인 정보가 없습니다.");
+     navigate('/login');
+     return;
+   }
+
+   try {
+
+     await axios.post(`${SERVER_URL}/api/auth/logout`, {}, {
+       headers: {
+         Authorization: `Bearer ${token}`
+       }
+     });
+
+     alert("성공적으로 로그아웃되었습니다.");
+   } catch (error) {
+     console.error("로그아웃 서버 통신 실패:", error);
+
+   } finally {
+
+     localStorage.removeItem('token');
+     localStorage.removeItem('username');
+     navigate('/login');
+   }
+ };
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
