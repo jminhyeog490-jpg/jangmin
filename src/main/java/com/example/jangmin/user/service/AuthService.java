@@ -68,11 +68,10 @@ public class AuthService {
             redisService.deleteValues(username);
         }
 
-        if (expiration > 0) {
-            expiration = 1000 * 60 * 5;
+        expiration = Math.max(expiration, 1000 * 60 * 5);
 
-            redisService.setBlackList("blacklist:" + accessToken, "logout", Duration.ofMillis(expiration));
-        }
+
+        redisService.setBlackList("blacklist:" + accessToken, "logout", Duration.ofMillis(expiration));
     }
 
     @Transactional
