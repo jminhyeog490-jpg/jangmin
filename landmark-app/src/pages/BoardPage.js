@@ -10,6 +10,8 @@ const BoardPage = () => {
     const [replyInputs, setReplyInputs] = useState({});
     const [activeReplyId, setActiveReplyId] = useState(null);
 
+    const currentUsername = localStorage.getItem('username');
+
     useEffect(() => {
         fetchPosts();
     }, []);
@@ -38,6 +40,19 @@ const BoardPage = () => {
         }
     };
 
+    // ✅ 게시글 삭제 (PostController: DELETE /api/posts/{id})
+    const handleDeletePost = async (postId) => {
+        if (!window.confirm("정말로 이 게시글을 삭제하시겠습니까?")) return;
+        try {
+            await apiClient.delete(`/api/posts/${postId}`);
+            alert("게시글이 삭제되었습니다.");
+            fetchPosts();
+        } catch (error) {
+            console.error('게시글 삭제 실패:', error);
+            alert("삭제 권한이 없거나 오류가 발생했습니다.");
+        }
+    };
+
     const handleAddComment = async (postId) => {
         const commentText = commentInputs[postId];
         if (!commentText?.trim()) return;
@@ -47,6 +62,20 @@ const BoardPage = () => {
             fetchPosts();
         } catch (error) {
             console.error('댓글 작성 실패:', error);
+        }
+    };
+
+    // ✅ 댓글 삭제 (CommentController: DELETE /api/posts/{postId}/comments/{commentId})
+    const handleDeleteComment = async (postId, commentId) => {
+        if (!window.confirm("댓글을 삭제하시겠습니까?")) return;
+        try {
+            // 컨트롤러의 @RequestMapping이 /api/posts/{postId}/comments 이므로 주소를 맞춰줍니다.
+            await apiClient.delete(`/api/posts/${postId}/comments/${commentId}`);
+            alert("댓글이 삭제되었습니다.");
+            fetchPosts();
+        } catch (error) {
+            console.error('댓글 삭제 실패:', error);
+            alert("본인 댓글만 삭제할 수 있습니다.");
         }
     };
 
@@ -84,7 +113,12 @@ const BoardPage = () => {
                 <div style={styles.postList}>
                     {posts.map(post => (
                         <div key={post.id} style={styles.postCard}>
-                            <h3 style={styles.postTitle}>{post.title}</h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <h3 style={styles.postTitle}>{post.title}</h3>
+                                {post.authorName === currentUsername && (
+                                    <button onClick={() => handleDeletePost(post.id)} style={styles.deleteBtn}>삭제</button>
+                                )}
+                            </div>
                             <p style={styles.postContent}>{post.content}</p>
                             <div style={styles.postMeta}>
                                 작성자: {post.authorName} | {new Date(post.createdAt).toLocaleDateString()}
@@ -93,24 +127,29 @@ const BoardPage = () => {
                             <div style={styles.commentSection}>
                                 <h4>댓글 ({post.comments ? post.comments.length : 0})</h4>
 
-
                                 {post.comments && post.comments
                                     .filter(comment => !comment.parentId)
                                     .map(comment => (
                                         <div key={comment.id} style={styles.commentItem}>
                                             <div style={styles.commentMain}>
-                                                <strong>{comment.authorName}:</strong> {comment.content}
-                                                <button style={styles.replyButton} onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}>
-                                                    {activeReplyId === comment.id ? '취소' : '답글'}
-                                                </button>
+                                                <div>
+                                                    <strong>{comment.authorName}:</strong> {comment.content}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button style={styles.replyButton} onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}>
+                                                        {activeReplyId === comment.id ? '취소' : '답글'}
+                                                    </button>
+                                                    {comment.authorName === currentUsername && (
+                                                        <button style={styles.delTextBtn} onClick={() => handleDeleteComment(post.id, comment.id)}>삭제</button>
+                                                    )}
+                                                </div>
                                             </div>
 
-                                            {/* 답글 입력창 */}
                                             {activeReplyId === comment.id && (
                                                 <div style={styles.replyInputWrapper}>
                                                     <input
                                                         style={styles.replyInput}
-                                                        placeholder="답글 입력 후 엔터..."
+                                                        placeholder="답글 입력..."
                                                         value={replyInputs[comment.id] || ''}
                                                         onChange={(e) => setReplyInputs({...replyInputs, [comment.id]: e.target.value})}
                                                         onKeyDown={(e) => e.key === 'Enter' && handleAddReply(post.id, comment.id)}
@@ -119,18 +158,23 @@ const BoardPage = () => {
                                                 </div>
                                             )}
 
-                                            {/* 대댓글(자식) 출력 영역 */}
                                             {comment.children && comment.children.map(child => (
                                                 <div key={child.id} style={styles.replyItem}>
-                                                    <span style={styles.replyArrow}>└</span>
-                                                    <strong>{child.authorName}:</strong> {child.content}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <div>
+                                                            <span style={styles.replyArrow}>└</span>
+                                                            <strong>{child.authorName}:</strong> {child.content}
+                                                        </div>
+                                                        {child.authorName === currentUsername && (
+                                                            <button style={styles.delTextBtn} onClick={() => handleDeleteComment(post.id, child.id)}>삭제</button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
                                     ))
                                 }
 
-                                {/* 새 일반 댓글 입력창 */}
                                 <input
                                     type="text"
                                     placeholder="댓글 입력 후 엔터..."
@@ -171,7 +215,10 @@ const styles = {
     replyInput: { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', outline: 'none' },
     replyItem: { marginLeft: '20px', fontSize: '13px', color: '#666', marginTop: '5px' },
     replyArrow: { marginRight: '5px', color: '#4285F4' },
-    commentInput: { width: '100%', padding: '8px', marginTop: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }
+    commentInput: { width: '100%', padding: '8px', marginTop: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' },
+    // ✅ 추가된 버튼 스타일
+    deleteBtn: { padding: '5px 10px', backgroundColor: '#ff4d4f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
+    delTextBtn: { background: 'none', border: 'none', color: '#ff4d4f', cursor: 'pointer', fontSize: '12px' }
 };
 
 export default BoardPage;
