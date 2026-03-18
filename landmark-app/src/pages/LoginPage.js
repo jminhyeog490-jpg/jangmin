@@ -9,42 +9,39 @@ const LoginPage = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        try{
+        try {
+            // 1. 로그인 요청 (현재 서버 IP: 8090 포트)
             const response = await axios.post('http://52.79.237.156:8090/api/auth/login', {
                 username: username,
                 password: password,
             });
 
             console.log('응답 데이터:', response.data);
-            console.log('응답 헤더:', response.headers);
 
-            // 2. 토큰 추출 (우선순위: 헤더 -> 바디 순서)
-            let token = response.headers['authorization'];
+            // 2. 토큰 추출 (헤더 우선, 없으면 바디에서 가져옴)
+            let token = response.headers['authorization'] || response.data.accessToken || response.data.token;
 
-            if (!token && response.data && response.data.accessToken) {
-                token = response.data.accessToken;
-            }
-
-            // 3. 토큰이 존재할 경우 처리
             if (token) {
+                // 'Bearer ' 접두사가 붙어있을 경우 제거하고 순수 토큰만 추출
                 const pureToken = token.startsWith('Bearer ') ? token.substring(7).trim() : token.trim();
+
+                // ✅ 기존에 꼬여있을지 모르는 로컬 스토리지 한 번 비우고 저장
+                localStorage.clear();
                 localStorage.setItem('token', pureToken);
                 localStorage.setItem('username', username);
 
                 alert("로그인에 성공했습니다!");
+
+                // ✅ 리액트답게 navigate만 사용 (reload 없이도 MainPage의 useEffect가 작동함)
                 navigate('/main');
-                window.location.reload();
             } else {
                 alert("로그인 성공했으나 서버로부터 토큰을 받지 못했습니다.");
             }
 
         } catch (error) {
             console.error('로그인 실패 상세:', error);
-            if (error.response) {
-                alert(`로그인 실패: ${error.response.data.message || '아이디 또는 비밀번호를 확인하세요.'}`);
-            } else {
-                alert('서버와 연결할 수 없습니다.');
-            }
+            const errorMsg = error.response?.data?.message || '아이디 또는 비밀번호를 확인하세요.';
+            alert(`로그인 실패: ${errorMsg}`);
         }
     };
 
@@ -52,7 +49,6 @@ const LoginPage = () => {
         <div style={styles.container}>
             <div style={styles.formContainer}>
                 <h2 style={styles.title}>로그인</h2>
-                {}
                 <form onSubmit={handleLogin}>
                     <div style={styles.inputGroup}>
                         <label htmlFor="username" style={styles.label}>아이디</label>
@@ -88,7 +84,6 @@ const LoginPage = () => {
     );
 };
 
-// 스타일 정의 (변경 없음)
 const styles = {
     container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f0f2f5' },
     formContainer: { padding: '40px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px' },
