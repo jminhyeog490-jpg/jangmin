@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/ai")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://52.79.237.156:3000")
 public class AiController {
 
 
