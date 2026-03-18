@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 
 function MainPage() {
+  const SERVER_URL = "http://52.79.237.156:8090"
   const [currentPos, setCurrentPos] = useState({ lat: 36.9103, lon: 127.1332 });
   const [mapObj, setMapObj] = useState(null);
   const [aiResult, setAiResult] = useState(null);
@@ -40,7 +41,7 @@ function MainPage() {
 
   const fetchAndShowSavedLandmarks = async () => {
     try {
-      const response = await axios.get('http://localhost:8090/api/v1/landmarks');
+      const response = await axios.get(`${SERVER_URL}/api/v1/landmarks`);
       const data = response.data;
       setSavedLandmarks(data);
       setShowSaved(true);
@@ -83,7 +84,7 @@ function MainPage() {
           `- ${p.place_name} (주소: ${p.address_name}, 카테고리: ${p.category_name})`
         ).join("\n");
         try {
-          const response = await axios.post(`http://localhost:8090/api/v1/ai/recommend`, {
+          const response = await axios.post(`${SERVER_URL}/api/v1/ai/recommend`, {
             places: placeDetails,
             userQuery: finalQuery + " (반드시 주소 정보를 포함해서 답변해줘)"
           });
@@ -104,7 +105,7 @@ function MainPage() {
     if (!name) return;
     const description = prompt("장소에 대한 설명을 입력하세요:", "설명 없음");
     try {
-      await axios.post('http://localhost:8090/api/v1/landmarks/register', {
+      await axios.post(`${SERVER_URL}/api/v1/landmarks/register`, {
         name, description, latitude: currentPos.lat, longitude: currentPos.lon, distance: 0.0
       });
       alert("✅ 위치 저장 완료!");
