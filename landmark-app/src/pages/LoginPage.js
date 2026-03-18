@@ -9,10 +9,8 @@ const LoginPage = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-
-        try {
-            // 1. 백엔드 로그인 API 호출
-            const response = await axios.post('http://localhost:8090/api/auth/login', {
+        try{
+            const response = await axios.post('http://52.79.237.156:8090/api/auth/login', {
                 username: username,
                 password: password,
             });
