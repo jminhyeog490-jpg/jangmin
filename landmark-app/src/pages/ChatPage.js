@@ -5,6 +5,7 @@ import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
 
 const ChatPage = () => {
+    const SERVER_URL = "http://52.79.237.156:8090";
     const [rooms, setRooms] = useState([]);
     const [currentRoom, setCurrentRoom] = useState(null); // 현재 선택된 방
     const [messages, setMessages] = useState([]);
@@ -59,7 +60,7 @@ const ChatPage = () => {
 
     // STOMP 연결 함수
     const connectStomp = (roomId) => {
-        const socket = new SockJS('http://localhost:8090/ws-chat');
+        const socket = new SockJS(`${SERVER_URL}/ws-chat`);
         stompClient.current = Stomp.over(socket);
 
         stompClient.current.connect({}, () => {
