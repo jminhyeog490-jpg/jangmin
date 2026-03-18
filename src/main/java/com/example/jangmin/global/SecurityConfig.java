@@ -46,8 +46,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         //  모든 사용자에게 허용할 경로들 (게시글 API 포함)
                         .requestMatchers(
-                                "/api/auth/**", "/api/v1/ai/**", "/api/users/signup",
-                                "/api/auth/login", "/*.html", "/swagger-ui/**",
+                                "/", "/index.html", "/static/**", "/*.json",
+                                "/*.png", "/*.ico", "/favicon.ico", "/manifest.json"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/auth/**", "/api/v1/auth/**", "/api/v1/ai/**",
+                                "/api/users/signup", "/api/auth/login", "/swagger-ui/**",
                                 "/v3/api-docs/**", "/email-send/**", "/api/v1/landmarks/**",
                                 "/ws-chat/**", "/api/posts/**"
                         ).permitAll()

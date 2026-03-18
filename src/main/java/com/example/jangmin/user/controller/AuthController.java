@@ -7,7 +7,7 @@ import com.example.jangmin.user.service.EmailService; // EmailService 주입 필
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-@CrossOrigin(origins = "http://52.79.237.156:3000")
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
