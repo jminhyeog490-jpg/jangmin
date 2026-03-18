@@ -71,7 +71,7 @@ public class SecurityConfig {
 
         // 리액트 서버 주소 허용
         configuration.setAllowedOrigins(List.of("http://localhost:3000",
-                "http://52.79.237.156:3000"));
+                "http://52.79.237.156:3000","http://52.79.237.156:8090"));
         // 모든 HTTP 메서드 허용
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         // 모든 헤더 허용
