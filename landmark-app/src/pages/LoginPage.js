@@ -7,32 +7,28 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
 
+    // 뒤로가기 함수
+    const handleBack = () => {
+        navigate(-1);
+    };
+
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            // 1. 로그인 요청 (현재 서버 IP: 8090 포트)
             const response = await axios.post('http://52.79.237.156:8090/api/auth/login', {
                 username: username,
                 password: password,
             });
 
-            console.log('응답 데이터:', response.data);
-
-            // 2. 토큰 추출 (헤더 우선, 없으면 바디에서 가져옴)
             let token = response.headers['authorization'] || response.data.accessToken || response.data.token;
 
             if (token) {
-                // 'Bearer ' 접두사가 붙어있을 경우 제거하고 순수 토큰만 추출
                 const pureToken = token.startsWith('Bearer ') ? token.substring(7).trim() : token.trim();
-
-                // ✅ 기존에 꼬여있을지 모르는 로컬 스토리지 한 번 비우고 저장
                 localStorage.clear();
                 localStorage.setItem('token', pureToken);
                 localStorage.setItem('username', username);
 
                 alert("로그인에 성공했습니다!");
-
-                // ✅ 리액트답게 navigate만 사용 (reload 없이도 MainPage의 useEffect가 작동함)
                 navigate('/main');
             } else {
                 alert("로그인 성공했으나 서버로부터 토큰을 받지 못했습니다.");
@@ -47,6 +43,11 @@ const LoginPage = () => {
 
     return (
         <div style={styles.container}>
+            {/* 상단 네비게이션 영역 (뒤로가기 버튼) */}
+            <div style={styles.navBar}>
+                <button onClick={handleBack} style={styles.backButton}>〈</button>
+            </div>
+
             <div style={styles.formContainer}>
                 <h2 style={styles.title}>로그인</h2>
                 <form onSubmit={handleLogin}>
@@ -85,8 +86,39 @@ const LoginPage = () => {
 };
 
 const styles = {
-    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f0f2f5' },
-    formContainer: { padding: '40px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px' },
+    container: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: '#f0f2f5',
+        position: 'relative' // navBar 배치를 위해 추가
+    },
+    navBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        padding: '20px',
+        boxSizing: 'border-box'
+    },
+    backButton: {
+        backgroundColor: 'transparent',
+        border: 'none',
+        fontSize: '24px',
+        cursor: 'pointer',
+        color: '#333',
+        fontWeight: 'bold',
+        padding: '10px'
+    },
+    formContainer: {
+        padding: '40px',
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        width: '100%',
+        maxWidth: '400px'
+    },
     title: { marginBottom: '24px', color: '#333', textAlign: 'center', fontWeight: 'bold', fontSize: '24px' },
     inputGroup: { marginBottom: '20px' },
     label: { display: 'block', marginBottom: '8px', color: '#555', fontWeight: '500' },

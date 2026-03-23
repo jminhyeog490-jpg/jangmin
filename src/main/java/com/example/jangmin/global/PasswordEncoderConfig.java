@@ -1,4 +1,4 @@
-package com.example.jangmin.global; // 패키지 위치 이동 권장
+package com.example.jangmin.global;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

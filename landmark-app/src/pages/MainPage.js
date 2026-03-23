@@ -19,6 +19,11 @@ function MainPage() {
 
   const navigate = useNavigate();
 
+  // 뒤로가기 함수
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   useEffect(() => {
     const container = document.getElementById('map');
     const options = {
@@ -57,7 +62,6 @@ function MainPage() {
         });
 
         window.kakao.maps.event.addListener(marker, 'click', () => {
-          // 마커 클릭
           setSelectedPlace(place);
           setAiResult(null);
         });
@@ -94,7 +98,6 @@ function MainPage() {
     }, { location: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon), radius: 2000 });
   };
 
-  // 길찾기
   const openRoute = (place) => {
     const url = `https://map.kakao.com/link/to/${place.name},${place.latitude},${place.longitude}`;
     window.open(url, '_blank');
@@ -113,46 +116,43 @@ function MainPage() {
     } catch (error) { alert("❌ 저장 실패"); }
   };
 
- const handleLogout = async () => {
-   const token = localStorage.getItem('token');
-
-   if (!token) {
-     alert("로그인 정보가 없습니다.");
-     navigate('/login');
-     return;
-   }
-
-   try {
-
-     await axios.post(`${SERVER_URL}/api/auth/logout`, {}, {
-       headers: {
-         Authorization: `Bearer ${token}`
-       }
-     });
-
-     alert("성공적으로 로그아웃되었습니다.");
-   } catch (error) {
-     console.error("로그아웃 서버 통신 실패:", error);
-
-   } finally {
-
-     localStorage.removeItem('token');
-     localStorage.removeItem('username');
-     navigate('/login');
-   }
- };
+  const handleLogout = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert("로그인 정보가 없습니다.");
+      navigate('/login');
+      return;
+    }
+    try {
+      await axios.post(`${SERVER_URL}/api/auth/logout`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert("성공적으로 로그아웃되었습니다.");
+    } catch (error) {
+      console.error("로그아웃 서버 통신 실패:", error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      navigate('/login');
+    }
+  };
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      {/* 상단 네비게이션 바: 뒤로가기 버튼 포함 */}
       <div style={navBarStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button onClick={handleBack} style={backButtonStyle}>〈</button>
           <div style={{ fontWeight: 'bold', fontSize: '18px' }}>Jangmin Map</div>
-          <div style={{ display: 'flex', gap: '15px' }}>
-              <Link to="/board" style={navLinkStyle}>📋 게시판</Link>
-              <Link to="/chat" style={navLinkStyle}>💬 채팅방</Link>
-              <button onClick={handleLogout} style={logoutButtonStyle}>로그아웃</button>
-          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <Link to="/board" style={navLinkStyle}>📋 게시판</Link>
+          <Link to="/chat" style={navLinkStyle}>💬 채팅방</Link>
+          <button onClick={handleLogout} style={logoutButtonStyle}>로그아웃</button>
+        </div>
       </div>
 
+      {/* AI 검색 영역 */}
       <div style={aiInputAreaStyle}>
         <input
           type="text"
@@ -175,22 +175,23 @@ function MainPage() {
         </div>
       </div>
 
+      {/* 추천 목록 사이드바 */}
       {showSaved && (
         <div style={sidebarStyle}>
-          <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
-            <strong style={{fontSize:'16px'}}>추천 목록</strong>
-            <button onClick={()=>setShowSaved(false)} style={{border:'none', background:'none', cursor:'pointer'}}>X</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <strong style={{ fontSize: '16px' }}>추천 목록</strong>
+            <button onClick={() => setShowSaved(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>X</button>
           </div>
-          <div style={{overflowY:'auto', maxHeight:'80vh'}}>
-            {savedLandmarks.length === 0 ? <p style={{fontSize:'12px'}}>저장된 장소가 없습니다.</p> :
+          <div style={{ overflowY: 'auto', maxHeight: '80vh' }}>
+            {savedLandmarks.length === 0 ? <p style={{ fontSize: '12px' }}>저장된 장소가 없습니다.</p> :
               savedLandmarks.map(place => (
                 <div key={place.id} style={listItemStyle} onClick={() => {
                   mapObj.panTo(new window.kakao.maps.LatLng(place.latitude, place.longitude));
-                  setSelectedPlace(place); // 장소 정보 저장
-                  setAiResult(null); // AI 창 닫기
+                  setSelectedPlace(place);
+                  setAiResult(null);
                 }}>
-                  <div style={{fontWeight:'bold', fontSize:'14px'}}>{place.name}</div>
-                  <div style={{fontSize:'12px', color:'#666'}}>{place.description}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{place.name}</div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>{place.description}</div>
                 </div>
               ))
             }
@@ -198,7 +199,7 @@ function MainPage() {
         </div>
       )}
 
-      {/* 저장된 장소 정보 카드 */}
+      {/* 장소 정보 카드 */}
       {selectedPlace && (
         <div style={resultCardStyle}>
           <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#34a853' }}>📍 저장된 장소 정보</div>
@@ -218,6 +219,7 @@ function MainPage() {
         </div>
       )}
 
+      {/* AI 결과 카드 */}
       {aiResult && (
         <div style={resultCardStyle}>
           <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#4285F4' }}>🤖 AI 가이드 추천</div>
@@ -233,6 +235,8 @@ function MainPage() {
   );
 }
 
+// 스타일 객체
+const backButtonStyle = { backgroundColor: 'transparent', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333' };
 const actionButtonStyle = (bg, color) => ({ flex: 1, padding: '10px', backgroundColor: bg, color: color, border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' });
 const navBarStyle = { position: 'absolute', top: 0, left: 0, width: '100%', height: '60px', backgroundColor: 'white', zIndex: 1000, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', boxSizing: 'border-box' };
 const navLinkStyle = { textDecoration: 'none', color: '#333', fontWeight: 'bold' };
