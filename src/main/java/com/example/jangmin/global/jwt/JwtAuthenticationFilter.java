@@ -42,14 +42,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     response.getWriter().write("유효하지 않은 토큰");
                     return;
                 }
-
+                token = token.replace("Bearer ", "").trim();
                 Claims claims = jwtUtil.getUserInfoFromToken(token);
                 String username = claims.getSubject();
 
                 // ✅ Redis 검증 먼저
                 String savedToken = redisService.getValues("AT:" + username);
 
-                if (savedToken == null || !savedToken.equals(token)) {
+
+
+                if (savedToken != null && !savedToken.equals(token)) {
                     log.error("다른 곳에서 로그인됨: {}", username);
 
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
