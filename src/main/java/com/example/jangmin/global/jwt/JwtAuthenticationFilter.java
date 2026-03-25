@@ -34,8 +34,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String uri = request.getRequestURI();
 
-        // ✅ 1. 로그인 / 로그아웃은 무조건 통과
-        if (uri.contains("/api/auth/login") || uri.contains("/api/auth/logout")) {
+        // ✅ 1. 인증 제외 경로 (로그인, 로그아웃, 그리고 채팅/H2 등 필요한 경로 추가)
+        if (uri.contains("/api/auth/login") || uri.contains("/api/auth/logout") || uri.contains("/ws-stomp")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -44,20 +44,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = jwtUtil.resolveToken(request);
 
         try {
-            // 토큰이 있을 때만 검사
             if (StringUtils.hasText(token)) {
-
                 token = token.trim();
 
-                // "Bearer " 제거
+                // "Bearer " 제거 (이미 제거되어 있을 수도 있으니 확인 후 처리)
                 if (token.startsWith("Bearer ")) {
                     token = token.substring(7);
                 }
 
                 // ✅ 3. 토큰 유효성 검사
                 if (!jwtUtil.validateToken(token)) {
+                    log.error("❌ 유효하지 않은 토큰");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("유효하지 않은 토큰");
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("유효하지 않은 토큰입니다.");
                     return;
                 }
 
@@ -65,33 +65,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtUtil.getUserInfoFromToken(token);
                 String username = claims.getSubject();
 
-                // ✅ 5. Redis에서 현재 토큰 조회
+                // ✅ 5. Redis에서 현재 토큰 조회 및 비교 로직 개선
                 String savedToken = redisService.getValues("AT:" + username);
 
-                log.info("🟡 savedToken = {}", savedToken);
-                log.info("🟡 requestToken = {}", token);
+                if (savedToken != null) {
+                    // 중요: Redis에 저장된 토큰도 Bearer 가 붙어있다면 제거 후 비교해야 함
+                    String pureSavedToken = savedToken.startsWith("Bearer ") ? savedToken.substring(7) : savedToken;
 
-                // ✅ 6. 동시 로그인 체크
-                if (savedToken != null && !savedToken.equals(token)) {
-                    log.error("❌ 다른 곳에서 로그인됨: {}", username);
+                    log.info("🟡 savedToken(Pure) = {}", pureSavedToken);
+                    log.info("🟡 requestToken = {}", token);
 
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("다른 기기에서 로그인되었습니다.");
-                    return;
+                    if (!pureSavedToken.equals(token)) {
+                        log.error("❌ 중복 로그인 차단: {}", username);
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("다른 기기에서 로그인되었습니다.");
+                        return;
+                    }
                 }
 
-                // ✅ 7. 인증 설정
+                // ✅ 6. 인증 설정
                 setAuthentication(username);
             }
-
         } catch (Exception e) {
-            log.error("❌ 인증 실패", e);
+            log.error("❌ 인증 과정 중 오류 발생", e);
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("인증 실패");
             return;
         }
 
-        // ✅ 8. 다음 필터 진행 (필수)
+        // ✅ 7. 다음 필터 진행
         filterChain.doFilter(request, response);
     }
 
