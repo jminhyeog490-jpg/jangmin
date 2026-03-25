@@ -60,6 +60,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     response.getWriter().write("유효하지 않은 토큰입니다.");
                     return;
                 }
+                // 🔥 블랙리스트 체크
+                String isBlackList = redisService.getValues("blacklist:" + token);
+
+                if (isBlackList != null) {
+                    log.error("❌ 블랙리스트 토큰 접근 차단");
+
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("이미 로그아웃된 토큰입니다.");
+                    return;
+                }
 
                 // ✅ 4. 사용자 정보 추출
                 Claims claims = jwtUtil.getUserInfoFromToken(token);

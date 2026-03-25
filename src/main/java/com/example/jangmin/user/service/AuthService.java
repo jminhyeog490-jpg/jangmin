@@ -36,6 +36,24 @@ public class AuthService {
         String username = user.getUsername();
         String role = user.getRole().name();
 
+        // 🔥 1. 기존 AccessToken 조회
+        String oldAccessToken = redisService.getValues("AT:" + username);
+
+        if (oldAccessToken != null) {
+            // 🔥 Bearer 제거 (혹시 남아있을 경우 대비)
+            if (oldAccessToken.startsWith("Bearer ")) {
+                oldAccessToken = oldAccessToken.substring(7);
+            }
+
+            // 🔥 2. 기존 세션 강제 로그아웃 (블랙리스트)
+            redisService.setBlackList(
+                    "blacklist:" + oldAccessToken,
+                    "forced logout",
+                    Duration.ofMinutes(30)
+            );
+        }
+
+        // 🔥 3. 새 토큰 발급
         String accessToken = jwtUtil.createToken(username, role);
         String refreshToken = jwtUtil.createRefreshToken(username);
 
@@ -46,7 +64,7 @@ public class AuthService {
                 jwtUtil.getRefreshTokenTimeToLive()
         );
 
-        // ✅ 핵심: AccessToken 저장 (동시 로그인 체크용)
+        // ✅ AccessToken 저장 (덮어쓰기)
         redisService.setValues(
                 "AT:" + username,
                 accessToken,
