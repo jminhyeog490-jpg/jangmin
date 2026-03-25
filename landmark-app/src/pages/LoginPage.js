@@ -2,12 +2,20 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+// ✅ axios 인터셉터 (전역 설정)
+axios.interceptors.request.use((config) => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+        config.headers.Authorization = "Bearer " + token;
+    }
+    return config;
+});
+
 const LoginPage = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
 
-    // 뒤로가기 함수
     const handleBack = () => {
         navigate(-1);
     };
@@ -20,18 +28,24 @@ const LoginPage = () => {
                 password: password,
             });
 
-            let token = response.headers['authorization'] || response.data.accessToken || response.data.token;
+            let token = response.headers['authorization']
+                || response.data.accessToken
+                || response.data.token;
 
             if (token) {
-                const pureToken = token.startsWith('Bearer ') ? token.substring(7).trim() : token.trim();
-                localStorage.clear();
-                localStorage.setItem('token', pureToken);
+                const pureToken = token.startsWith('Bearer ')
+                    ? token.substring(7).trim()
+                    : token.trim();
+
+                // ❌ localStorage.clear(); 제거
+                // ✅ 키 통일
+                localStorage.setItem('accessToken', pureToken);
                 localStorage.setItem('username', username);
 
                 alert("로그인에 성공했습니다!");
                 navigate('/main');
             } else {
-                alert("로그인 성공했으나 서버로부터 토큰을 받지 못했습니다.");
+                alert("로그인 성공했으나 토큰 없음");
             }
 
         } catch (error) {
@@ -43,7 +57,6 @@ const LoginPage = () => {
 
     return (
         <div style={styles.container}>
-            {/* 상단 네비게이션 영역 (뒤로가기 버튼) */}
             <div style={styles.navBar}>
                 <button onClick={handleBack} style={styles.backButton}>〈</button>
             </div>
@@ -77,6 +90,7 @@ const LoginPage = () => {
                     </div>
                     <button type="submit" style={styles.button}>로그인</button>
                 </form>
+
                 <div style={styles.footer}>
                     <p>계정이 없으신가요? <Link to="/signup" style={styles.link}>회원가입</Link></p>
                 </div>
@@ -92,7 +106,7 @@ const styles = {
         alignItems: 'center',
         height: '100vh',
         backgroundColor: '#f0f2f5',
-        position: 'relative' // navBar 배치를 위해 추가
+        position: 'relative'
     },
     navBar: {
         position: 'absolute',
@@ -123,7 +137,7 @@ const styles = {
     inputGroup: { marginBottom: '20px' },
     label: { display: 'block', marginBottom: '8px', color: '#555', fontWeight: '500' },
     input: { width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '16px', boxSizing: 'border-box' },
-    button: { width: '100%', padding: '14px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px', transition: 'background-color 0.2s' },
+    button: { width: '100%', padding: '14px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' },
     footer: { marginTop: '20px', textAlign: 'center', color: '#777', fontSize: '14px' },
     link: { color: '#4285F4', textDecoration: 'none', fontWeight: 'bold' },
 };
