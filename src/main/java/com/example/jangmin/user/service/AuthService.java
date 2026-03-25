@@ -44,6 +44,9 @@ public class AuthService {
         // 5. Redis에 Refresh Token 저장
         redisService.setValues(username, refreshToken, jwtUtil.getRefreshTokenTimeToLive());
 
+        redisService.setValues("AT:" + username, accessToken, Duration.ofMillis(60 * 60 * 1000L));
+
+
         // 6. 응답 데이터 구성 (userId 포함)
         return TokenResponseDto.builder()
                 .grantType(JwtUtil.BEARER_PREFIX)
@@ -62,6 +65,12 @@ public class AuthService {
 
         Claims claims = jwtUtil.getUserInfoFromToken(accessToken);
         String username = claims.getSubject();
+
+        redisService.deleteValues("AT:" + username);
+        if (redisService.getValues(username) != null) {
+            redisService.deleteValues(username);    // RefreshToken 삭제
+        }
+
         long expiration = claims.getExpiration().getTime() - System.currentTimeMillis();
 
         if (redisService.getValues(username) != null) {
@@ -94,6 +103,8 @@ public class AuthService {
         }
 
         String newAccessToken = jwtUtil.createToken(username, user.getRole().name());
+
+        redisService.setValues("AT:" + username, newAccessToken, Duration.ofMillis(60 * 60 * 1000L));
 
         return TokenResponseDto.builder()
                 .grantType(JwtUtil.BEARER_PREFIX)

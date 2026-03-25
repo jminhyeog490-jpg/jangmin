@@ -1,5 +1,6 @@
 package com.example.jangmin.global.jwt;
 
+import com.example.jangmin.redis.RedisService;
 import com.example.jangmin.user.service.CustomUserDetailsService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -24,6 +25,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
+    private final RedisService redisService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -42,6 +44,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // 2. 토큰이 유효하면 인증 객체 설정
                     Claims claims = jwtUtil.getUserInfoFromToken(token);
                     setAuthentication(claims.getSubject());
+
+                    String username =claims.getSubject();
+
+                    // ✅ 1. Redis에 저장된 AccessToken 조회
+                    String savedToken = redisService.getValues("AT:" + username);
+
+// ✅ 2. 비교 (불일치하면 요청 차단)
+                    if (savedToken == null || !savedToken.equals(token)) {
+                        log.error("다른 곳에서 로그인됨: {}", username);
+                        throw new RuntimeException("다른 곳에서 로그인됨");
+                    }
+
+// 3. 인증 객체 설정
+                    setAuthentication(username);
                 }
             }
         } catch (Exception e) {

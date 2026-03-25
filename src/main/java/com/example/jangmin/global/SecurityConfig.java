@@ -2,6 +2,7 @@ package com.example.jangmin.global;
 
 import com.example.jangmin.global.jwt.JwtAuthenticationFilter;
 import com.example.jangmin.global.jwt.JwtUtil;
+import com.example.jangmin.redis.RedisService;
 import com.example.jangmin.user.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,11 +28,14 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
+    private final RedisService redisService;
 
     // 생성자에서 CustomUserDetailsService 앞에 @Lazy를 붙여 순환 참조를 끊기
-    public SecurityConfig(JwtUtil jwtUtil, @Lazy CustomUserDetailsService userDetailsService) {
+    public SecurityConfig(JwtUtil jwtUtil, @Lazy CustomUserDetailsService userDetailsService,RedisService redisService) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.redisService = redisService;
+
     }
 
     @Bean
@@ -63,7 +67,7 @@ public class SecurityConfig {
                 )
                 .logout(logout -> logout.disable())
                 // JWT 필터 설정 유지
-                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailsService,redisService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
