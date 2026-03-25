@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -33,38 +34,44 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String uri = request.getRequestURI();
 
-        // ✅ 1. 로그인 / 로그아웃은 무조건 통과 (핵심)
+        // ✅ 1. 로그인 / 로그아웃은 무조건 통과
         if (uri.contains("/api/auth/login") || uri.contains("/api/auth/logout")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // ✅ 2. 토큰 가져오기
+        // ✅ 2. 토큰 추출
         String token = jwtUtil.resolveToken(request);
 
         try {
-            if (token != null) {
+            // 토큰이 있을 때만 검사
+            if (StringUtils.hasText(token)) {
+
                 token = token.trim();
 
-                // ✅ 3. 유효성 검사
+                // "Bearer " 제거
+                if (token.startsWith("Bearer ")) {
+                    token = token.substring(7);
+                }
+
+                // ✅ 3. 토큰 유효성 검사
                 if (!jwtUtil.validateToken(token)) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.getWriter().write("유효하지 않은 토큰");
                     return;
                 }
 
-                token = token.replace("Bearer ", "").trim();
-
+                // ✅ 4. 사용자 정보 추출
                 Claims claims = jwtUtil.getUserInfoFromToken(token);
                 String username = claims.getSubject();
 
-                // ✅ 4. Redis 토큰 조회
+                // ✅ 5. Redis에서 현재 토큰 조회
                 String savedToken = redisService.getValues("AT:" + username);
 
                 log.info("🟡 savedToken = {}", savedToken);
                 log.info("🟡 requestToken = {}", token);
 
-                // ✅ 5. 다른 기기 로그인 체크
+                // ✅ 6. 동시 로그인 체크
                 if (savedToken != null && !savedToken.equals(token)) {
                     log.error("❌ 다른 곳에서 로그인됨: {}", username);
 
@@ -73,7 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                // ✅ 6. 인증 세팅
+                // ✅ 7. 인증 설정
                 setAuthentication(username);
             }
 
@@ -84,7 +91,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ✅ 7. 다음 필터로 이동 (매우 중요)
+        // ✅ 8. 다음 필터 진행 (필수)
         filterChain.doFilter(request, response);
     }
 

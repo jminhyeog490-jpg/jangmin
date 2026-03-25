@@ -2,12 +2,12 @@ package com.example.jangmin.user.service;
 
 import com.example.jangmin.global.jwt.*;
 import com.example.jangmin.redis.RedisService;
-import com.example.jangmin.user.domain.User; // 유저 엔티티 임포트
+import com.example.jangmin.user.domain.User;
 import com.example.jangmin.user.dto.LoginRequestDto;
-import com.example.jangmin.user.repository.UserRepository; // 유저 레포지토리 임포트
+import com.example.jangmin.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder; // 패스워드 인코더 임포트
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,46 +19,58 @@ public class AuthService {
 
     private final JwtUtil jwtUtil;
     private final RedisService redisService;
-    private final UserRepository userRepository; // ✨ 추가: DB 조회를 위해 필요
-    private final PasswordEncoder passwordEncoder; // ✨ 추가: 비밀번호 비교를 위해 필요
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
+    // ✅ 로그인
     @Transactional
     public TokenResponseDto login(LoginRequestDto loginRequestDto) {
-        // 1. DB에서 사용자 조회 (회원가입 여부 확인)
+
         User user = userRepository.findByUsername(loginRequestDto.username())
                 .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 아이디입니다."));
 
-        // 2. 비밀번호 일치 여부 확인
         if (!passwordEncoder.matches(loginRequestDto.password(), user.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        // 3. 사용자 정보 추출
         String username = user.getUsername();
-        String role = user.getRole().name(); // DB에 저장된 실제 Role 사용
+        String role = user.getRole().name();
 
-        // 4. 토큰 생성
         String accessToken = jwtUtil.createToken(username, role);
         String refreshToken = jwtUtil.createRefreshToken(username);
 
-        // 5. Redis에 Refresh Token 저장
-        redisService.setValues(username, refreshToken, jwtUtil.getRefreshTokenTimeToLive());
+        // ✅ RefreshToken 저장
+        redisService.setValues(
+                username,
+                refreshToken,
+                jwtUtil.getRefreshTokenTimeToLive()
+        );
 
-        redisService.setValues("AT:" + username, accessToken, Duration.ofMillis(60 * 60 * 1000L));
+        // ✅ 핵심: AccessToken 저장 (동시 로그인 체크용)
+        redisService.setValues(
+                "AT:" + username,
+                accessToken,
+                Duration.ofMinutes(30)
+        );
 
-
-        // 6. 응답 데이터 구성 (userId 포함)
         return TokenResponseDto.builder()
                 .grantType(JwtUtil.BEARER_PREFIX)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .accessTokenExpiresIn(60 * 60 * 1000L)
-                .userId(user.getId()) // ✨ 추가: 리액트가 저장할 수 있도록 유저 PK 전달
+                .accessTokenExpiresIn(1000L * 60 * 30)
+                .userId(user.getId())
                 .build();
     }
 
+    // ✅ 로그아웃
     @Transactional
     public void logout(String accessToken) {
+
+        // 🔥 Bearer 제거 (핵심)
+        if (accessToken.startsWith("Bearer ")) {
+            accessToken = accessToken.substring(7);
+        }
+
         if (!jwtUtil.validateToken(accessToken)) {
             throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
         }
@@ -66,25 +78,27 @@ public class AuthService {
         Claims claims = jwtUtil.getUserInfoFromToken(accessToken);
         String username = claims.getSubject();
 
+        // ✅ AccessToken 삭제
         redisService.deleteValues("AT:" + username);
-        if (redisService.getValues(username) != null) {
-            redisService.deleteValues(username);    // RefreshToken 삭제
-        }
+
+        // ✅ RefreshToken 삭제
+        redisService.deleteValues(username);
 
         long expiration = claims.getExpiration().getTime() - System.currentTimeMillis();
-
-        if (redisService.getValues(username) != null) {
-            redisService.deleteValues(username);
-        }
-
         expiration = Math.max(expiration, 1000 * 60 * 5);
 
-
-        redisService.setBlackList("blacklist:" + accessToken, "logout", Duration.ofMillis(expiration));
+        // ✅ 블랙리스트 등록
+        redisService.setBlackList(
+                "blacklist:" + accessToken,
+                "logout",
+                Duration.ofMillis(expiration)
+        );
     }
 
+    // ✅ 토큰 재발급
     @Transactional
     public TokenResponseDto reissue(String refreshToken) {
+
         if (!jwtUtil.validateToken(refreshToken)) {
             throw new IllegalArgumentException("Refresh Token이 유효하지 않습니다.");
         }
@@ -92,7 +106,6 @@ public class AuthService {
         Claims claims = jwtUtil.getUserInfoFromToken(refreshToken);
         String username = claims.getSubject();
 
-        // DB에서 최신 유저 정보 확인 (Role 등)
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
@@ -104,14 +117,19 @@ public class AuthService {
 
         String newAccessToken = jwtUtil.createToken(username, user.getRole().name());
 
-        redisService.setValues("AT:" + username, newAccessToken, Duration.ofMillis(60 * 60 * 1000L));
+        // ✅ AccessToken 갱신 (동시 로그인 유지)
+        redisService.setValues(
+                "AT:" + username,
+                newAccessToken,
+                Duration.ofMinutes(30)
+        );
 
         return TokenResponseDto.builder()
                 .grantType(JwtUtil.BEARER_PREFIX)
                 .accessToken(newAccessToken)
                 .refreshToken(refreshToken)
-                .accessTokenExpiresIn(60 * 60 * 1000L)
-                .userId(user.getId()) // 재발급 시에도 ID 유지
+                .accessTokenExpiresIn(1000L * 60 * 30)
+                .userId(user.getId())
                 .build();
     }
 }
