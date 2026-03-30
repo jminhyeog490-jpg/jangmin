@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-// ✅ Axios 인터셉터: 모든 요청에 로컬 스토리지의 토큰을 자동으로 포함
+// ✅ Axios 인터셉터 설정
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
   if (token) {
@@ -19,16 +19,14 @@ function MainPage() {
   const [mapObj, setMapObj] = useState(null);
   const [aiResult, setAiResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [savedLandmarks, setSavedLandmarks] = useState([]);
+  const [recommendedPlaces, setRecommendedPlaces] = useState([]); // ✅ 내 목록 -> 추천 목록으로 변경
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [markers, setMarkers] = useState([]);
 
-  // 1️⃣ 지도 초기화 함수 (useCallback으로 메모이제이션하여 무한 루프 방지)
   const initMap = useCallback((lat, lon) => {
     const container = document.getElementById('map');
     if (!container) return;
 
-    // 카카오맵 SDK가 완전히 로드된 후 실행되도록 보장
     window.kakao.maps.load(() => {
       const options = {
         center: new window.kakao.maps.LatLng(lat, lon),
@@ -37,7 +35,6 @@ function MainPage() {
       const kakaoMap = new window.kakao.maps.Map(container, options);
       setMapObj(kakaoMap);
 
-      // 현재 내 위치에 마커 표시
       new window.kakao.maps.Marker({
         map: kakaoMap,
         position: new window.kakao.maps.LatLng(lat, lon)
@@ -46,7 +43,6 @@ function MainPage() {
   }, []);
 
   useEffect(() => {
-    // 2️⃣ 로그인 체크: 토큰 없으면 로그인 페이지로 이동
     const token = localStorage.getItem("accessToken");
     if (!token) {
       alert("로그인이 필요한 서비스입니다.");
@@ -54,7 +50,6 @@ function MainPage() {
       return;
     }
 
-    // 3️⃣ 현재 위치 정보를 가져와서 지도 초기화
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -62,47 +57,34 @@ function MainPage() {
           setCurrentPos({ lat, lon });
           initMap(lat, lon);
         },
-        () => {
-          // 위치 권한 거부 시 기본 좌표 사용
-          initMap(36.9103, 127.1332);
-        }
+        () => initMap(36.9103, 127.1332)
       );
     } else {
       initMap(36.9103, 127.1332);
     }
+  }, [initMap, navigate]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 의존성 배열을 비워 처음에 딱 한 번만 실행되도록 함 (중요!)
-
-  // 내 목록 불러오기
-  const fetchAndShowSavedLandmarks = async () => {
+  // ✅ 추천 장소 목록 불러오기 (기존 내 목록 로직 활용)
+  const fetchRecommendedPlaces = async () => {
     if (!mapObj) return;
     try {
+      // 기존 API 엔드포인트를 사용하되 상태 저장소 이름을 변경함
       const response = await axios.get(`${SERVER_URL}/api/v1/landmarks`);
-      setSavedLandmarks(response.data);
+      setRecommendedPlaces(response.data);
       setIsSidebarOpen(true);
       setAiResult(null);
 
-      // 기존 마커 제거
       markers.forEach(m => m.setMap(null));
-
       const newMarkers = response.data.map(place => {
         const pos = new window.kakao.maps.LatLng(place.latitude, place.longitude);
         return new window.kakao.maps.Marker({ map: mapObj, position: pos, title: place.name });
       });
       setMarkers(newMarkers);
     } catch (error) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        alert("세션이 만료되었습니다. 다시 로그인해주세요.");
-        localStorage.clear();
-        navigate('/login');
-      } else {
-        alert("목록을 불러오지 못했습니다.");
-      }
+      alert("추천 목록을 불러오지 못했습니다.");
     }
   };
 
-  // AI 추천 받기
   const handleAIRecommendation = () => {
     if (isLoading || !mapObj) return;
     setIsLoading(true);
@@ -119,7 +101,7 @@ function MainPage() {
           });
           setAiResult(res.data.answer);
         } catch {
-          setAiResult("AI 추천을 가져오는데 실패했습니다.");
+          setAiResult("AI 분석에 실패했습니다.");
         } finally {
           setIsLoading(false);
         }
@@ -127,16 +109,14 @@ function MainPage() {
     }, { location: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon), radius: 2000 });
   };
 
-  // 로그아웃 처리
-  const handleLogout = async () => {
-    try {
-      await axios.post(`${SERVER_URL}/api/auth/logout`);
-    } catch (e) {
-      console.error("Logout request failed", e);
-    } finally {
-      localStorage.clear();
-      navigate("/login");
-    }
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
+  };
+
+  // ✅ 카카오 길찾기 링크 생성 함수
+  const getKakaoNaviLink = (name, lat, lon) => {
+    return `https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lon}`;
   };
 
   return (
@@ -145,14 +125,19 @@ function MainPage() {
 
       {/* 상단 액션바 */}
       <div style={styles.topOverlay}>
-        <button onClick={() => navigate(-1)} style={styles.circleBtn}>‹</button>
         <div style={styles.searchBar}>
           <input placeholder="어디로 떠나볼까요?" style={styles.searchInput} />
           <button onClick={handleAIRecommendation} style={styles.aiBtn}>
             {isLoading ? "분석중..." : "AI 추천"}
           </button>
         </div>
-        <button onClick={handleLogout} style={styles.logoutBtn}>Log out</button>
+        <button onClick={handleLogout} style={styles.logoutBtn}>로그아웃</button>
+      </div>
+
+      {/* 왼쪽 네비게이션 바로가기 (게시판/채팅) */}
+      <div style={styles.leftNavButtons}>
+        <button onClick={() => navigate('/board')} style={styles.navCircleBtn} title="게시판">📋</button>
+        <button onClick={() => navigate('/chat')} style={styles.navCircleBtn} title="채팅방">💬</button>
       </div>
 
       {/* 우측 컨트롤러 */}
@@ -164,8 +149,7 @@ function MainPage() {
 
       {/* 하단 플로팅 메뉴 */}
       <div style={styles.bottomNav}>
-        <button style={styles.navItem}>📍 장소저장</button>
-        <button onClick={fetchAndShowSavedLandmarks} style={styles.navItem}>📂 내 목록</button>
+        <button onClick={fetchRecommendedPlaces} style={styles.navItem}>✨ 추천 목록</button>
       </div>
 
       {/* 사이드 패널 */}
@@ -182,13 +166,24 @@ function MainPage() {
                   <div style={styles.aiText}>{aiResult}</div>
                 </div>
               )}
-              {savedLandmarks.length > 0 && !aiResult && (
+              {recommendedPlaces.length > 0 && !aiResult && (
                 <div>
-                  <h3 style={styles.panelTitle}>저장된 장소</h3>
-                  {savedLandmarks.map((item, idx) => (
+                  <h3 style={styles.panelTitle}>📍 추천 장소</h3>
+                  {recommendedPlaces.map((item, idx) => (
                     <div key={idx} style={styles.landmarkItem}>
-                      <strong>{item.name}</strong>
-                      <p>{item.description}</p>
+                      <div style={styles.itemInfo}>
+                        <strong>{item.name}</strong>
+                        <p style={styles.itemDesc}>{item.description}</p>
+                      </div>
+                      {/* ✅ 길찾기 버튼 추가 */}
+                      <a
+                        href={getKakaoNaviLink(item.name, item.latitude, item.longitude)}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={styles.naviLink}
+                      >
+                        길찾기 ↗
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -197,14 +192,6 @@ function MainPage() {
           )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.8; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }
@@ -212,22 +199,32 @@ function MainPage() {
 const styles = {
   container: { width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', backgroundColor: '#fff' },
   map: { width: '100%', height: '100%', zIndex: 1 },
-  topOverlay: { position: 'absolute', top: '20px', left: '20px', right: '20px', display: 'flex', alignItems: 'center', gap: '15px', zIndex: 10 },
-  circleBtn: { width: '45px', height: '45px', borderRadius: '50%', border: 'none', backgroundColor: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '24px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  topOverlay: { position: 'absolute', top: '20px', left: '20px', right: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
   searchBar: { flex: 1, height: '50px', backgroundColor: '#fff', borderRadius: '25px', display: 'flex', alignItems: 'center', padding: '0 5px 0 20px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', maxWidth: '500px' },
   searchInput: { border: 'none', flex: 1, outline: 'none', fontSize: '16px', color: '#333' },
-  aiBtn: { height: '40px', padding: '0 20px', borderRadius: '20px', border: 'none', background: 'linear-gradient(135deg, #007bff, #00c6ff)', color: '#fff', fontWeight: '600', cursor: 'pointer', transition: 'all 0.3s' },
-  logoutBtn: { padding: '10px 20px', borderRadius: '10px', border: 'none', backgroundColor: 'rgba(255,255,255,0.9)', color: '#666', fontWeight: '500', cursor: 'pointer' },
+  aiBtn: { height: '40px', padding: '0 20px', borderRadius: '20px', border: 'none', background: 'linear-gradient(135deg, #007bff, #00c6ff)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
+  logoutBtn: { marginLeft: '15px', padding: '10px 18px', borderRadius: '25px', border: 'none', backgroundColor: '#fff', color: '#ff4d4f', fontWeight: '600', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer' },
+
+  // ✅ 왼쪽 네비게이션 버튼 스타일
+  leftNavButtons: { position: 'absolute', left: '20px', top: '100px', display: 'flex', flexDirection: 'column', gap: '15px', zIndex: 10 },
+  navCircleBtn: { width: '50px', height: '50px', borderRadius: '50%', border: 'none', backgroundColor: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'transform 0.2s' },
+
   rightControls: { position: 'absolute', right: '20px', top: '100px', display: 'flex', flexDirection: 'column', gap: '10px', zIndex: 10 },
   sideControlBtn: { width: '40px', height: '40px', backgroundColor: '#fff', border: '1px solid #eee', borderRadius: '8px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', fontSize: '18px' },
-  bottomNav: { position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '12px', zIndex: 10 },
-  navItem: { padding: '12px 24px', borderRadius: '30px', border: 'none', backgroundColor: '#1a1a1a', color: '#fff', fontWeight: '600', boxShadow: '0 8px 20px rgba(0,0,0,0.2)', cursor: 'pointer', transition: 'transform 0.2s' },
-  sidePanel: { position: 'absolute', top: 0, left: 0, width: '350px', height: '100%', backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', boxShadow: '4px 0 20px rgba(0,0,0,0.1)', zIndex: 20, transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)', padding: '60px 25px 25px' },
-  closePanelBtn: { position: 'absolute', top: '20px', right: '20px', border: 'none', background: 'none', fontSize: '28px', cursor: 'pointer', color: '#999' },
-  panelTitle: { fontSize: '22px', fontWeight: '700', marginBottom: '20px', color: '#1a1a1a' },
-  aiText: { lineHeight: '1.6', color: '#444', whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '12px' },
-  landmarkItem: { padding: '15px', borderBottom: '1px solid #eee', marginBottom: '10px' },
-  loadingSkeleton: { textAlign: 'center', marginTop: '50px', color: '#007bff', fontWeight: '600', animation: 'pulse 1.5s infinite' }
+  bottomNav: { position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 },
+  navItem: { padding: '14px 30px', borderRadius: '35px', border: 'none', backgroundColor: '#1a1a1a', color: '#fff', fontWeight: '700', boxShadow: '0 8px 25px rgba(0,0,0,0.3)', cursor: 'pointer' },
+  sidePanel: { position: 'absolute', top: 0, left: 0, width: '360px', height: '100%', backgroundColor: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(10px)', boxShadow: '4px 0 20px rgba(0,0,0,0.1)', zIndex: 20, transition: 'transform 0.4s ease', padding: '70px 20px 20px' },
+  closePanelBtn: { position: 'absolute', top: '25px', right: '20px', border: 'none', background: 'none', fontSize: '28px', cursor: 'pointer', color: '#999' },
+  panelTitle: { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#111' },
+  aiText: { lineHeight: '1.7', color: '#444', whiteSpace: 'pre-wrap', backgroundColor: '#f0f4f8', padding: '18px', borderRadius: '15px', fontSize: '15px' },
+
+  // ✅ 추천 장소 아이템 스타일
+  landmarkItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0', borderBottom: '1px solid #f0f0f0' },
+  itemInfo: { flex: 1, paddingRight: '10px' },
+  itemDesc: { fontSize: '14px', color: '#777', margin: '5px 0 0 0' },
+  naviLink: { padding: '8px 12px', borderRadius: '8px', backgroundColor: '#fee500', color: '#3c1e1e', textDecoration: 'none', fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap' },
+
+  loadingSkeleton: { textAlign: 'center', marginTop: '100px', color: '#007bff', fontWeight: '700' }
 };
 
 export default MainPage;
