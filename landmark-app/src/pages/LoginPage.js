@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'; // useEffect 추가
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// ✅ axios 인터셉터 (전역 설정: 요청 시 토큰 자동 포함)
+// ✅ axios 인터셉터 설정
 axios.interceptors.request.use((config) => {
     const token = localStorage.getItem("accessToken");
     if (token) {
@@ -16,7 +16,6 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
 
-    // ✅ [추가] 이미 로그인된 토큰이 로컬에 있다면 바로 메인으로 리다이렉트
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
         if (token) {
@@ -28,16 +27,15 @@ const LoginPage = () => {
         navigate(-1);
     };
 
+    // ✅ 중첩된 부분 제거 및 에러 로직 강화
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            // 1. 로그인 요청
             const response = await axios.post('http://52.79.237.156:8090/api/auth/login', {
                 username: username,
                 password: password,
             });
 
-            // 2. 토큰 추출 (헤더 또는 바디)
             let token = response.headers['authorization']
                 || response.data.accessToken
                 || response.data.token;
@@ -47,30 +45,27 @@ const LoginPage = () => {
                     ? token.substring(7).trim()
                     : token.trim();
 
-                // ✅ 로컬 스토리지 저장 (키 통일)
                 localStorage.setItem('accessToken', pureToken);
                 localStorage.setItem('username', username);
 
                 alert("로그인에 성공했습니다!");
                 navigate('/main');
-            } else {
-                alert("로그인 성공했으나 토큰 정보가 없습니다.");
             }
-
         } catch (error) {
             console.error('로그인 실패 상세:', error);
 
-            // ✅ [중복 로그인 방지 핵심] 서버에서 보낸 에러 메시지 처리
-            // 백엔드 AuthService에서 IllegalStateException으로 던진 메시지를 띄웁니다.
-            const serverError = error.response?.data?.message || error.response?.data;
+            // ✅ 서버에서 온 에러 메시지 추출 (다양한 형태 대응)
+            const serverErrorMsg = error.response?.data?.message
+                                || (typeof error.response?.data === 'string' ? error.response.data : null)
+                                || "아이디 또는 비밀번호가 일치하지 않습니다.";
 
-            if (serverError && (serverError.includes("이미 다른 기기") || serverError.includes("로그인 중"))) {
-                // 중복 로그인 차단 시 알림
-                alert(`⚠️ 진입 불가: ${serverError}`);
-            } else if (error.response?.status === 401 || error.response?.status === 400) {
-                alert("아이디 또는 비밀번호가 일치하지 않습니다.");
-            } else {
-                alert(`로그인 오류: ${serverError || "서버와 연결할 수 없습니다."}`);
+            // 1. 중복 로그인 메시지 체크
+            if (serverErrorMsg.includes("이미 다른 기기") || serverErrorMsg.includes("로그인 중")) {
+                alert(`⚠️ 중복 로그인 제한:\n${serverErrorMsg}`);
+            }
+            // 2. 그 외 일반적인 로그인 실패
+            else {
+                alert(serverErrorMsg);
             }
         }
     };
@@ -121,7 +116,6 @@ const LoginPage = () => {
     );
 };
 
-// ... (styles 객체는 기존과 동일하므로 생략)
 const styles = {
     container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f0f2f5', position: 'relative' },
     navBar: { position: 'absolute', top: 0, left: 0, width: '100%', padding: '20px', boxSizing: 'border-box' },
