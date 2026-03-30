@@ -16,13 +16,11 @@ const ChatPage = () => {
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
 
-    // ✅ 인증 정보 가져오기 (키 이름 accessToken 확인)
     const currentUsername = localStorage.getItem('username')?.trim();
     const token = localStorage.getItem('accessToken');
 
     useEffect(() => {
         fetchRooms();
-        // 언마운트 시 연결 종료
         return () => {
             if (stompClient.current) stompClient.current.disconnect();
         };
@@ -46,11 +44,13 @@ const ChatPage = () => {
     const handleCreateRoom = async () => {
         if (!newRoomTitle.trim()) return;
         try {
+            // 백엔드 ChatRoomRequest(String title) DTO와 매칭되도록 객체 전송
             await apiClient.post('/api/chat/rooms', { title: newRoomTitle });
             setNewRoomTitle('');
-            fetchRooms(); // 생성 후 목록 갱신
+            fetchRooms();
         } catch (error) {
             console.error('채팅방 생성 실패:', error);
+            alert("채팅방 생성에 실패했습니다. 백엔드 로그를 확인하세요.");
         }
     };
 
@@ -72,19 +72,19 @@ const ChatPage = () => {
         fetchRooms();
     };
 
-    // 5. STOMP 연결 (인증 헤더 추가)
+    // 5. STOMP 연결
     const connectStomp = (roomId) => {
         const socket = new SockJS(`${SERVER_URL}/ws-chat`);
         stompClient.current = Stomp.over(socket);
-        stompClient.current.debug = null; // 콘솔 로그 지우기
 
-        // ✅ Spring Security가 WebSocket 연결을 허용하도록 토큰 전달
+        // ✅ [에러 해결] debug는 함수여야 하므로 빈 함수 할당
+        stompClient.current.debug = () => {};
+
         const headers = {
             Authorization: `Bearer ${token}`
         };
 
         stompClient.current.connect(headers, () => {
-            // 구독 (서버에서 메시지 받기)
             stompClient.current.subscribe(`/sub/chat/room/${roomId}`, (message) => {
                 const receivedMessage = JSON.parse(message.body);
                 if(!receivedMessage.createdAt) receivedMessage.createdAt = new Date().toISOString();
@@ -108,7 +108,6 @@ const ChatPage = () => {
             createdAt: new Date().toISOString()
         };
 
-        // ✅ 전송 시에도 헤더에 토큰 포함
         const headers = {
             Authorization: `Bearer ${token}`
         };
@@ -138,7 +137,6 @@ const ChatPage = () => {
         </div>
     );
 
-    // 채팅 목록 화면
     if (!currentRoom) {
         return (
             <div style={styles.container}>
@@ -159,7 +157,7 @@ const ChatPage = () => {
                     ) : (
                         rooms.map(room => (
                             <div key={room.id} className="room-card" style={styles.roomCard} onClick={() => handleEnterRoom(room)}>
-                                <div style={styles.roomAvatar}>{room.title.substring(0,1)}</div>
+                                <div style={styles.roomAvatar}>{room.title ? room.title.substring(0,1) : "R"}</div>
                                 <div style={styles.roomInfo}>
                                     <div style={styles.roomTitle}>{room.title}</div>
                                     <div style={styles.roomMeta}>{room.userCount || 0}명이 대화 중</div>
@@ -176,7 +174,6 @@ const ChatPage = () => {
         );
     }
 
-    // 채팅창 화면
     return (
         <div style={styles.container}>
             <ChatHeader title={currentRoom.title} subTitle={`${messages.length} messages`} onBackClick={handleLeaveRoom} />
@@ -221,7 +218,7 @@ const ChatPage = () => {
     );
 };
 
-// 스타일 (기존 유지)
+// 스타일 (동일)
 const styles = {
     container: { display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', maxWidth: '500px', margin: '0 auto', backgroundColor: '#fff', position: 'relative' },
     navBar: { height: '70px', borderBottom: '1px solid #f2f2f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', backgroundColor: '#fff', zIndex: 10 },

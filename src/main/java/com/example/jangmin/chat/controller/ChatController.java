@@ -1,8 +1,10 @@
 package com.example.jangmin.chat.controller;
 
+import com.example.jangmin.chat.domain.ChatRoom;
 import com.example.jangmin.chat.dto.ChatCreateDto;
 import com.example.jangmin.chat.dto.ChatResponseDto;
 import com.example.jangmin.chat.dto.ChatRoomDto;
+import com.example.jangmin.chat.dto.ChatRoomRequest;
 import com.example.jangmin.chat.service.ChatService;
 import com.example.jangmin.global.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +27,11 @@ public class ChatController {
     // 채팅방 생성
     @PostMapping("/api/chat/rooms")
     public ResponseEntity<ChatRoomDto> createRoom(
-            @RequestBody String title,
+            @RequestBody ChatRoomRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        
+
         Long userId = userDetails.getUser().getId();
-        ChatRoomDto room = chatService.createRoom(title, userId);
+        ChatRoomDto room = chatService.createRoom(request.title(), userId);
         return ResponseEntity.ok(room);
     }
 
@@ -44,7 +46,7 @@ public class ChatController {
     public ResponseEntity<Void> enterRoom(
             @PathVariable Long roomId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        
+
         Long userId = userDetails.getUser().getId();
         chatService.enterRoom(roomId, userId);
         return ResponseEntity.ok().build();

@@ -35,7 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String uri = request.getRequestURI();
 
         // ✅ 1. 인증 제외 경로 (로그인, 로그아웃, 그리고 채팅/H2 등 필요한 경로 추가)
-        if (uri.contains("/api/auth/login") || uri.contains("/api/auth/logout") || uri.contains("/ws-stomp")) {
+        if (uri.contains("/api/auth/login") || uri.contains("/api/auth/logout") || uri.contains("/api/users/signup") ||uri.contains("/ws-stomp")) {
             filterChain.doFilter(request, response);
             return;
         }
