@@ -16,7 +16,8 @@ const ChatPage = () => {
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
 
-    const currentUsername = localStorage.getItem('username')?.trim();
+    // 로컬 스토리지에서 유저네임 가져오기 (비교를 위해 trim 처리)
+    const currentUsername = localStorage.getItem('username')?.trim() || "";
     const token = localStorage.getItem('accessToken');
 
     useEffect(() => {
@@ -73,6 +74,7 @@ const ChatPage = () => {
         stompClient.current.connect(headers, () => {
             stompClient.current.subscribe(`/sub/chat/room/${roomId}`, (message) => {
                 const receivedMessage = JSON.parse(message.body);
+                // 서버에서 시간이 안 올 경우를 대비한 기본값
                 if(!receivedMessage.createdAt) receivedMessage.createdAt = new Date().toISOString();
                 setMessages((prev) => [...prev, receivedMessage]);
             });
@@ -87,7 +89,7 @@ const ChatPage = () => {
         const message = {
             roomId: currentRoom.id,
             content: newMessage,
-            sender: currentUsername,
+            sender: currentUsername, // 서버가 받는 필드명
             type: 'TALK',
             createdAt: new Date().toISOString()
         };
@@ -135,11 +137,10 @@ const ChatPage = () => {
                 </div>
                 <div style={styles.roomList}>
                     {rooms.map(room => (
-                        <div key={room.id} className="room-card" style={styles.roomCard} onClick={() => handleEnterRoom(room)}>
+                        <div key={room.id} style={styles.roomCard} onClick={() => handleEnterRoom(room)}>
                             <div style={styles.roomAvatar}>{room.title ? room.title.substring(0,1) : "R"}</div>
                             <div style={styles.roomInfo}>
                                 <div style={styles.roomTitle}>{room.title}</div>
-                                {/* 인원수 확인(roomMeta) 부분 제거됨 */}
                             </div>
                             <div style={styles.roomArrow}>〉</div>
                         </div>
@@ -155,7 +156,9 @@ const ChatPage = () => {
             <ChatHeader title={currentRoom.title} subTitle={`${messages.length} messages`} onBackClick={handleLeaveRoom} />
             <div style={styles.chatWindow}>
                 {messages.map((msg, index) => {
-                    const isMe = String(msg.sender).trim() === String(currentUsername).trim();
+                    // 서버에서 어떤 필드(sender 혹은 username)로 이름을 주든 대응하도록 수정
+                    const senderName = msg.sender || msg.username || "익명";
+                    const isMe = String(senderName).trim() === String(currentUsername).trim();
 
                     return (
                         <div key={index} style={{
@@ -164,9 +167,9 @@ const ChatPage = () => {
                             flexDirection: 'column',
                             alignItems: isMe ? 'flex-end' : 'flex-start',
                             width: '100%',
-                            marginBottom: '10px'
+                            marginBottom: '12px'
                         }}>
-                            {!isMe && <div style={styles.author}>{msg.sender}</div>}
+                            {!isMe && <div style={styles.author}>{senderName}</div>}
 
                             <div style={{
                                 display: 'flex',
@@ -200,7 +203,7 @@ const ChatPage = () => {
                 </div>
             </div>
             <style>{`
-                @keyframes bubbleUp { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                @keyframes bubbleUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
             `}</style>
         </div>
     );
@@ -226,8 +229,8 @@ const styles = {
     messageFadeIn: { animation: 'bubbleUp 0.3s ease-out' },
     author: { fontSize: '12px', color: '#888', fontWeight: '600', marginBottom: '5px', marginLeft: '4px' },
     timeLabel: { fontSize: '10px', color: '#ccc', minWidth: '55px', textAlign: 'center' },
-    myBubble: { padding: '12px 16px', backgroundColor: '#1a1a1a', color: '#fff', borderRadius: '20px 20px 4px 20px', fontSize: '14px', lineHeight: '1.5', maxWidth: '100%' },
-    otherBubble: { padding: '12px 16px', backgroundColor: '#f2f2f2', color: '#333', borderRadius: '20px 20px 20px 4px', fontSize: '14px', lineHeight: '1.5', maxWidth: '100%' },
+    myBubble: { padding: '12px 16px', backgroundColor: '#1a1a1a', color: '#fff', borderRadius: '20px 20px 4px 20px', fontSize: '14px', lineHeight: '1.5', maxWidth: '80%' },
+    otherBubble: { padding: '12px 16px', backgroundColor: '#f2f2f2', color: '#333', borderRadius: '20px 20px 20px 4px', fontSize: '14px', lineHeight: '1.5', maxWidth: '80%' },
     inputContainer: { padding: '20px', backgroundColor: '#fff' },
     inputWrapper: { display: 'flex', alignItems: 'center', backgroundColor: '#f8f8f8', borderRadius: '25px', padding: '5px 5px 5px 20px', border: '1px solid #f0f0f0' },
     chatInput: { flex: 1, border: 'none', backgroundColor: 'transparent', padding: '10px 0', fontSize: '14px' },
