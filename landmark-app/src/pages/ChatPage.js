@@ -157,7 +157,7 @@ const ChatPage = () => {
             <div style={styles.chatWindow}>
                 {messages.map((msg, index) => {
                     // 서버에서 어떤 필드(sender 혹은 username)로 이름을 주든 대응하도록 수정
-                    const senderName = msg.sender || msg.username || "익명";
+                    const senderName = msg.senderName|| msg.sender || msg.username || "익명";
                     const isMe = String(senderName).trim() === String(currentUsername).trim();
 
                     return (
