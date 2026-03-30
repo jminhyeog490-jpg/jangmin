@@ -55,7 +55,7 @@ public class AuthService {
         redisService.setValues(
                 username,
                 refreshToken,
-                Duration.ofMillis(jwtUtil.getRefreshTokenTimeToLive())
+                jwtUtil.getRefreshTokenTimeToLive()
         );
 
         redisService.setValues(
