@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import VanillaTilt from 'vanilla-tilt'; // ✅ npm install vanilla-tilt 필수
+import VanillaTilt from 'vanilla-tilt';
 
-// ✅ axios 인터셉터 설정
+// ✅ axios 인터셉터 설정 (모든 요청에 토큰 자동 포함)
 axios.interceptors.request.use((config) => {
     const token = localStorage.getItem("accessToken");
     if (token) {
@@ -21,15 +21,20 @@ const LoginPage = () => {
     const buttonRef = useRef(null);
 
     useEffect(() => {
-        // 이미 로그인 된 상태면 메인으로
+        // 1️⃣ 이미 로그인 된 상태면 메인으로 즉시 이동 (무한 루프 방지)
         const token = localStorage.getItem("accessToken");
         if (token) {
-            navigate('/main');
+            navigate('/main', { replace: true });
+            return;
         }
 
-        // 1. 3D 틸트 효과 초기화
-        if (cardRef.current) {
-            VanillaTilt.init(cardRef.current, {
+        // Cleanup 시 참조를 잃지 않도록 변수에 할당
+        const currentCard = cardRef.current;
+        const currentBtn = buttonRef.current;
+
+        // 2️⃣ 3D 틸트 효과 초기화
+        if (currentCard) {
+            VanillaTilt.init(currentCard, {
                 max: 5,
                 speed: 1000,
                 glare: true,
@@ -38,45 +43,44 @@ const LoginPage = () => {
             });
         }
 
-        // 2. 마그네틱 버튼 효과
+        // 3️⃣ 마그네틱 버튼 효과 로직
         const handleMouseMove = (e) => {
-            if (!buttonRef.current) return;
-            const btn = buttonRef.current;
-            const rect = btn.getBoundingClientRect();
+            if (!currentBtn) return;
+            const rect = currentBtn.getBoundingClientRect();
             const x = e.clientX - rect.left - rect.width / 2;
             const y = e.clientY - rect.top - rect.height / 2;
-            btn.style.transform = `translate(${x * 0.3}px, ${y * 0.5}px)`;
+            currentBtn.style.transform = `translate(${x * 0.3}px, ${y * 0.5}px)`;
         };
 
         const handleMouseLeave = () => {
-            if (buttonRef.current) {
-                buttonRef.current.style.transform = 'translate(0px, 0px)';
+            if (currentBtn) {
+                currentBtn.style.transform = 'translate(0px, 0px)';
             }
         };
 
-        const btn = buttonRef.current;
-        if (btn) {
-            btn.addEventListener('mousemove', handleMouseMove);
-            btn.addEventListener('mouseleave', handleMouseLeave);
+        if (currentBtn) {
+            currentBtn.addEventListener('mousemove', handleMouseMove);
+            currentBtn.addEventListener('mouseleave', handleMouseLeave);
         }
 
+        // 4️⃣ 컴포넌트 언마운트 시 정리 (Cleanup)
         return () => {
-            if (cardRef.current && cardRef.current.vanillaTilt) {
-                cardRef.current.vanillaTilt.destroy();
+            if (currentCard && currentCard.vanillaTilt) {
+                currentCard.vanillaTilt.destroy();
             }
-            if (btn) {
-                btn.removeEventListener('mousemove', handleMouseMove);
-                btn.removeEventListener('mouseleave', handleMouseLeave);
+            if (currentBtn) {
+                currentBtn.removeEventListener('mousemove', handleMouseMove);
+                currentBtn.removeEventListener('mouseleave', handleMouseLeave);
             }
         };
-    }, [navigate]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // navigate 의존성을 제거하거나 []를 써서 마운트 시 한 번만 실행
 
     const handleBack = () => navigate(-1);
 
     const handleLogin = async (e) => {
         e.preventDefault();
 
-        // 400 에러 방지를 위한 데이터 정리
         const loginData = {
             username: username.trim(),
             password: password.trim()
@@ -87,7 +91,7 @@ const LoginPage = () => {
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // 토큰 추출 (다양한 경로 대응)
+            // 헤더와 데이터 양쪽에서 토큰 확인
             const token = response.headers['authorization'] ||
                           response.headers['Authorization'] ||
                           response.data.accessToken ||
@@ -98,8 +102,8 @@ const LoginPage = () => {
                 localStorage.setItem('accessToken', pureToken);
                 localStorage.setItem('username', username);
 
-                // ✅ 확실한 페이지 전환을 위해 location.assign 사용
-                window.location.assign('/main');
+                // ✅ SPA 내비게이션을 위해 navigate 사용 (안될 경우 대비해 replace 적용)
+                navigate('/main', { replace: true });
             } else {
                 alert("로그인 응답에 토큰이 없습니다.");
             }
@@ -183,118 +187,24 @@ const LoginPage = () => {
     );
 };
 
+// ... styles 객체는 기존과 동일 ...
 const styles = {
-    container: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        backgroundColor: '#ffffff',
-        position: 'relative',
-        overflow: 'hidden',
-        fontFamily: "'Poppins', sans-serif",
-    },
-    navBar: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        padding: '30px 40px',
-        boxSizing: 'border-box',
-        zIndex: 10,
-    },
-    backButton: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        fontSize: '16px',
-        cursor: 'pointer',
-        color: '#333',
-        fontWeight: '500',
-    },
-    formCard: {
-        padding: '60px 50px',
-        backgroundColor: '#ffffff',
-        borderRadius: '24px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
-        width: '100%',
-        maxWidth: '460px',
-        boxSizing: 'border-box',
-        textAlign: 'center',
-        animation: 'fadeInUp 0.8s ease-out forwards',
-        transformStyle: 'preserve-3d',
-        willChange: 'transform',
-    },
+    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#ffffff', position: 'relative', overflow: 'hidden', fontFamily: "'Poppins', sans-serif" },
+    navBar: { position: 'absolute', top: 0, left: 0, width: '100%', padding: '30px 40px', boxSizing: 'border-box', zIndex: 10 },
+    backButton: { backgroundColor: 'transparent', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#333', fontWeight: '500' },
+    formCard: { padding: '60px 50px', backgroundColor: '#ffffff', borderRadius: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.08)', width: '100%', maxWidth: '460px', boxSizing: 'border-box', textAlign: 'center', animation: 'fadeInUp 0.8s ease-out forwards', transformStyle: 'preserve-3d', willChange: 'transform' },
     header: { marginBottom: '50px' },
-    title: {
-        margin: '0 0 10px 0',
-        color: '#1a1a1a',
-        fontWeight: '700',
-        fontSize: '34px',
-        letterSpacing: '-1.5px',
-        transform: 'translateZ(30px)',
-    },
-    subtitle: {
-        margin: 0,
-        color: '#888',
-        fontSize: '16px',
-        transform: 'translateZ(20px)',
-    },
+    title: { margin: '0 0 10px 0', color: '#1a1a1a', fontWeight: '700', fontSize: '34px', letterSpacing: '-1.5px', transform: 'translateZ(30px)' },
+    subtitle: { margin: 0, color: '#888', fontSize: '16px', transform: 'translateZ(20px)' },
     form: { display: 'flex', flexDirection: 'column' },
-    inputGroup: {
-        marginBottom: '35px',
-        position: 'relative',
-        transform: 'translateZ(15px)',
-    },
-    underlineInput: {
-        width: '100%',
-        padding: '12px 0',
-        border: 'none',
-        borderBottom: '2px solid #eaeaea',
-        backgroundColor: 'transparent',
-        fontSize: '16px',
-        color: '#333',
-        transition: 'all 0.3s',
-        outline: 'none',
-    },
-    inputHighlight: {
-        position: 'absolute',
-        bottom: 0,
-        left: '50%',
-        width: '0%',
-        height: '2px',
-        backgroundColor: '#1a1a1a',
-        transition: 'all 0.4s ease',
-    },
-    btnWrapper: {
-        marginTop: '20px',
-        perspective: '1000px',
-    },
-    dynamicButton: {
-        width: '100%',
-        padding: '18px',
-        backgroundColor: '#1a1a1a',
-        color: 'white',
-        border: 'none',
-        borderRadius: '12px',
-        fontSize: '17px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-        transition: 'box-shadow 0.3s',
-        willChange: 'transform',
-    },
-    footer: {
-        marginTop: '40px',
-        fontSize: '15px',
-        transform: 'translateZ(10px)',
-    },
+    inputGroup: { marginBottom: '35px', position: 'relative', transform: 'translateZ(15px)' },
+    underlineInput: { width: '100%', padding: '12px 0', border: 'none', borderBottom: '2px solid #eaeaea', backgroundColor: 'transparent', fontSize: '16px', color: '#333', transition: 'all 0.3s', outline: 'none' },
+    inputHighlight: { position: 'absolute', bottom: 0, left: '50%', width: '0%', height: '2px', backgroundColor: '#1a1a1a', transition: 'all 0.4s ease' },
+    btnWrapper: { marginTop: '20px', perspective: '1000px' },
+    dynamicButton: { width: '100%', padding: '18px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '12px', fontSize: '17px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', transition: 'box-shadow 0.3s', willChange: 'transform' },
+    footer: { marginTop: '40px', fontSize: '15px', transform: 'translateZ(10px)' },
     footerText: { color: '#888' },
-    link: {
-        color: '#1a1a1a',
-        textDecoration: 'none',
-        fontWeight: '600',
-        marginLeft: '8px',
-    },
+    link: { color: '#1a1a1a', textDecoration: 'none', fontWeight: '600', marginLeft: '8px' },
 };
 
 export default LoginPage;

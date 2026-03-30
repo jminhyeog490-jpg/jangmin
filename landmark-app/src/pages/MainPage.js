@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
   if (token) {
-    // 백엔드 Spring Security 설정에 맞춰 Bearer 접두사 추가
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -24,8 +23,30 @@ function MainPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [markers, setMarkers] = useState([]);
 
+  // 1️⃣ 지도 초기화 함수 (useCallback으로 메모이제이션하여 무한 루프 방지)
+  const initMap = useCallback((lat, lon) => {
+    const container = document.getElementById('map');
+    if (!container) return;
+
+    // 카카오맵 SDK가 완전히 로드된 후 실행되도록 보장
+    window.kakao.maps.load(() => {
+      const options = {
+        center: new window.kakao.maps.LatLng(lat, lon),
+        level: 3
+      };
+      const kakaoMap = new window.kakao.maps.Map(container, options);
+      setMapObj(kakaoMap);
+
+      // 현재 내 위치에 마커 표시
+      new window.kakao.maps.Marker({
+        map: kakaoMap,
+        position: new window.kakao.maps.LatLng(lat, lon)
+      });
+    });
+  }, []);
+
   useEffect(() => {
-    // 1️⃣ 로그인 체크: 토큰이 없으면 즉시 로그인 페이지로 강제 이동
+    // 2️⃣ 로그인 체크: 토큰 없으면 로그인 페이지로 이동
     const token = localStorage.getItem("accessToken");
     if (!token) {
       alert("로그인이 필요한 서비스입니다.");
@@ -33,43 +54,44 @@ function MainPage() {
       return;
     }
 
-    // 2️⃣ 카카오맵 초기화
-    const container = document.getElementById('map');
-    const options = {
-      center: new window.kakao.maps.LatLng(currentPos.lat, currentPos.lon),
-      level: 3
-    };
-    const kakaoMap = new window.kakao.maps.Map(container, options);
-    setMapObj(kakaoMap);
-
-    // 3️⃣ 현재 위치 가져오기
+    // 3️⃣ 현재 위치 정보를 가져와서 지도 초기화
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude: lat, longitude: lon } = position.coords;
-        setCurrentPos({ lat, lon });
-        const myLoc = new window.kakao.maps.LatLng(lat, lon);
-        kakaoMap.setCenter(myLoc);
-        new window.kakao.maps.Marker({ map: kakaoMap, position: myLoc });
-      });
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude: lat, longitude: lon } = position.coords;
+          setCurrentPos({ lat, lon });
+          initMap(lat, lon);
+        },
+        () => {
+          // 위치 권한 거부 시 기본 좌표 사용
+          initMap(36.9103, 127.1332);
+        }
+      );
+    } else {
+      initMap(36.9103, 127.1332);
     }
-  }, [navigate]); // navigate 의존성 추가
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 의존성 배열을 비워 처음에 딱 한 번만 실행되도록 함 (중요!)
 
   // 내 목록 불러오기
   const fetchAndShowSavedLandmarks = async () => {
+    if (!mapObj) return;
     try {
       const response = await axios.get(`${SERVER_URL}/api/v1/landmarks`);
       setSavedLandmarks(response.data);
       setIsSidebarOpen(true);
       setAiResult(null);
 
+      // 기존 마커 제거
       markers.forEach(m => m.setMap(null));
+
       const newMarkers = response.data.map(place => {
         const pos = new window.kakao.maps.LatLng(place.latitude, place.longitude);
         return new window.kakao.maps.Marker({ map: mapObj, position: pos, title: place.name });
       });
       setMarkers(newMarkers);
     } catch (error) {
-      // 토큰 만료 등의 사유로 401/403 에러 발생 시 처리
       if (error.response?.status === 401 || error.response?.status === 403) {
         alert("세션이 만료되었습니다. 다시 로그인해주세요.");
         localStorage.clear();
@@ -82,7 +104,7 @@ function MainPage() {
 
   // AI 추천 받기
   const handleAIRecommendation = () => {
-    if (isLoading) return;
+    if (isLoading || !mapObj) return;
     setIsLoading(true);
     setIsSidebarOpen(true);
 
@@ -112,7 +134,7 @@ function MainPage() {
     } catch (e) {
       console.error("Logout request failed", e);
     } finally {
-      localStorage.clear(); // 토큰 및 유저 정보 삭제
+      localStorage.clear();
       navigate("/login");
     }
   };
@@ -135,14 +157,14 @@ function MainPage() {
 
       {/* 우측 컨트롤러 */}
       <div style={styles.rightControls}>
-        <button onClick={() => alert('현재 위치로 이동')} style={styles.sideControlBtn}>🎯</button>
-        <button onClick={() => {}} style={styles.sideControlBtn}>+</button>
-        <button onClick={() => {}} style={styles.sideControlBtn}>-</button>
+        <button onClick={() => window.location.reload()} style={styles.sideControlBtn}>🎯</button>
+        <button style={styles.sideControlBtn}>+</button>
+        <button style={styles.sideControlBtn}>-</button>
       </div>
 
       {/* 하단 플로팅 메뉴 */}
       <div style={styles.bottomNav}>
-        <button onClick={() => {}} style={styles.navItem}>📍 장소저장</button>
+        <button style={styles.navItem}>📍 장소저장</button>
         <button onClick={fetchAndShowSavedLandmarks} style={styles.navItem}>📂 내 목록</button>
       </div>
 
@@ -187,7 +209,6 @@ function MainPage() {
   );
 }
 
-// ... 스타일 정의는 동일하게 유지 ...
 const styles = {
   container: { width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', backgroundColor: '#fff' },
   map: { width: '100%', height: '100%', zIndex: 1 },
