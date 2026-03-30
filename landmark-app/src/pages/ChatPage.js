@@ -15,21 +15,15 @@ const ChatPage = () => {
     const stompClient = useRef(null);
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
-
-    // 로컬 스토리지 값을 가져올 때 확실히 처리
     const currentUsername = localStorage.getItem('username')?.trim();
 
-    useEffect(() => {
-        fetchRooms();
-    }, []);
+    useEffect(() => { fetchRooms(); }, []);
 
     const fetchRooms = async () => {
         try {
             const response = await apiClient.get('/api/chat/rooms');
             setRooms(response.data);
-        } catch (error) {
-            console.error('목록 불러오기 실패:', error);
-        }
+        } catch (error) { console.error('목록 불러오기 실패:', error); }
     };
 
     const handleCreateRoom = async () => {
@@ -38,9 +32,7 @@ const ChatPage = () => {
             await apiClient.post('/api/chat/rooms', { title: newRoomTitle });
             setNewRoomTitle('');
             fetchRooms();
-        } catch (error) {
-            console.error('채팅방 생성 실패:', error);
-        }
+        } catch (error) { console.error('채팅방 생성 실패:', error); }
     };
 
     const handleEnterRoom = (room) => {
@@ -58,13 +50,12 @@ const ChatPage = () => {
     const connectStomp = (roomId) => {
         const socket = new SockJS(`${SERVER_URL}/ws-chat`);
         stompClient.current = Stomp.over(socket);
+        // 디버그 로그 제거 (깔끔한 콘솔을 위해)
+        stompClient.current.debug = null;
         stompClient.current.connect({}, () => {
             stompClient.current.subscribe(`/sub/chat/room/${roomId}`, (message) => {
                 const receivedMessage = JSON.parse(message.body);
-                // 백엔드 BaseEntity 시간이 없을 경우를 대비해 현재 시간 할당
-                if(!receivedMessage.createdAt) {
-                    receivedMessage.createdAt = new Date().toISOString();
-                }
+                if(!receivedMessage.createdAt) receivedMessage.createdAt = new Date().toISOString();
                 setMessages((prev) => [...prev, receivedMessage]);
             });
         });
@@ -86,56 +77,69 @@ const ChatPage = () => {
     const formatTime = (dateString) => {
         if (!dateString) return "";
         const date = new Date(dateString);
-        return date.toLocaleTimeString('ko-KR', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
+        return date.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const ChatHeader = ({ title, onBackClick }) => (
+    const ChatHeader = ({ title, onBackClick, subTitle }) => (
         <div style={styles.navBar}>
             <button onClick={onBackClick} style={styles.backButton}>〈</button>
-            <div style={{ fontWeight: 'bold', fontSize: '17px' }}>{title}</div>
+            <div style={styles.headerTitleArea}>
+                <div style={styles.headerMainTitle}>{title}</div>
+                {subTitle && <div style={styles.headerSubTitle}>{subTitle}</div>}
+            </div>
             <div style={{ width: '40px' }}></div>
         </div>
     );
 
+    // [이미지: 실시간 채팅 UI 구조도]
+    // 채팅 목록 화면
     if (!currentRoom) {
         return (
             <div style={styles.container}>
-                <ChatHeader title="채팅 목록" onBackClick={() => navigate('/main')} />
+                <ChatHeader title="Messages" onBackClick={() => navigate('/main')} />
                 <div style={styles.createRoomArea}>
-                    <input type="text" placeholder="방 제목 입력" value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} style={styles.input} />
-                    <button onClick={handleCreateRoom} style={styles.button}>생성</button>
+                    <input
+                        type="text"
+                        placeholder="새로운 대화방 제목..."
+                        value={newRoomTitle}
+                        onChange={(e) => setNewRoomTitle(e.target.value)}
+                        style={styles.roomInput}
+                    />
+                    <button onClick={handleCreateRoom} style={styles.createButton}>생성</button>
                 </div>
                 <div style={styles.roomList}>
                     {rooms.map(room => (
-                        <div key={room.id} style={styles.roomCard} onClick={() => handleEnterRoom(room)}>
-                            <div style={styles.roomTitle}>{room.title}</div>
-                            <div style={styles.roomMeta}>{room.userCount || 0}명 참여 중</div>
+                        <div key={room.id} className="room-card" style={styles.roomCard} onClick={() => handleEnterRoom(room)}>
+                            <div style={styles.roomAvatar}>{room.title.substring(0,1)}</div>
+                            <div style={styles.roomInfo}>
+                                <div style={styles.roomTitle}>{room.title}</div>
+                                <div style={styles.roomMeta}>{room.userCount || 0}명이 대화 중</div>
+                            </div>
+                            <div style={styles.roomArrow}>〉</div>
                         </div>
                     ))}
                 </div>
+                <style>{`
+                    .room-card:active { background-color: #f0f0f0; transform: scale(0.98); }
+                    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                `}</style>
             </div>
         );
     }
 
+    // 채팅창 화면
     return (
         <div style={styles.container}>
-            <ChatHeader title={currentRoom.title} onBackClick={handleLeaveRoom} />
+            <ChatHeader title={currentRoom.title} subTitle={`${messages.length} messages`} onBackClick={handleLeaveRoom} />
             <div style={styles.chatWindow}>
                 {messages.map((msg, index) => {
-                    // ⭐ 쏠림 현상 방지: 두 값이 일치하는지 콘솔에서 확인하세요
-                    // console.log(`나: [${currentUsername}], 보낸이: [${msg.sender}]`);
                     const isMe = String(msg.sender).trim() === String(currentUsername).trim();
-
                     return (
-                        <div key={index} style={isMe ? styles.myMessageWrapper : styles.otherMessageWrapper}>
+                        <div key={index} style={{...styles.messageFadeIn, ...(isMe ? styles.myMessageWrapper : styles.otherMessageWrapper)}}>
                             {!isMe && <div style={styles.author}>{msg.sender}</div>}
                             <div style={isMe ? styles.myMessageRow : styles.otherMessageRow}>
                                 {isMe && <span style={styles.timeLabel}>{formatTime(msg.createdAt)}</span>}
@@ -149,52 +153,68 @@ const ChatPage = () => {
                 })}
                 <div ref={messagesEndRef} />
             </div>
-            <div style={styles.inputArea}>
-                <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    style={styles.chatInput}
-                    placeholder="메시지를 입력하세요"
-                />
-                <button onClick={handleSendMessage} style={styles.sendButton}>전송</button>
+            <div style={styles.inputContainer}>
+                <div style={styles.inputWrapper}>
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                        style={styles.chatInput}
+                        placeholder="메시지를 입력하세요..."
+                    />
+                    <button onClick={handleSendMessage} style={styles.sendButton}>
+                        <div style={styles.sendIcon}>▲</div>
+                    </button>
+                </div>
             </div>
+            <style>{`
+                input:focus { outline: none; }
+                @keyframes bubbleUp { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+            `}</style>
         </div>
     );
 };
 
 const styles = {
-    container: { display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', maxWidth: '500px', margin: '0 auto', backgroundColor: '#fff' },
-    navBar: { height: '60px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 15px', backgroundColor: '#fff' },
-    backButton: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' },
+    container: { display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', maxWidth: '500px', margin: '0 auto', backgroundColor: '#fff', position: 'relative' },
+    navBar: { height: '70px', borderBottom: '1px solid #f2f2f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', backgroundColor: '#fff', zIndex: 10 },
+    backButton: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#333' },
+    headerTitleArea: { textAlign: 'center' },
+    headerMainTitle: { fontWeight: '700', fontSize: '18px', color: '#1a1a1a' },
+    headerSubTitle: { fontSize: '11px', color: '#00cc66', fontWeight: '600', marginTop: '2px' },
 
-    createRoomArea: { padding: '15px', display: 'flex', gap: '8px', borderBottom: '1px solid #f5f5f5' },
-    input: { flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ddd' },
-    button: { padding: '10px 15px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+    createRoomArea: { padding: '20px', display: 'flex', gap: '10px' },
+    roomInput: { flex: 1, padding: '12px 16px', borderRadius: '12px', border: '1px solid #eee', backgroundColor: '#f8f8f8', fontSize: '14px' },
+    createButton: { padding: '10px 20px', backgroundColor: '#1a1a1a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' },
 
-    roomList: { flex: 1, overflowY: 'auto', padding: '15px' },
-    roomCard: { padding: '15px', borderBottom: '1px solid #f9f9f9', cursor: 'pointer' },
-    roomTitle: { fontWeight: '600', fontSize: '16px' },
-    roomMeta: { fontSize: '12px', color: '#999', marginTop: '4px' },
+    roomList: { flex: 1, overflowY: 'auto', padding: '0 20px' },
+    roomCard: { display: 'flex', alignItems: 'center', padding: '16px 0', borderBottom: '1px solid #fcfcfc', cursor: 'pointer', transition: 'all 0.2s' },
+    roomAvatar: { width: '45px', height: '45px', borderRadius: '15px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#555', marginRight: '15px' },
+    roomInfo: { flex: 1 },
+    roomTitle: { fontWeight: '600', fontSize: '16px', color: '#1a1a1a' },
+    roomMeta: { fontSize: '13px', color: '#aaa', marginTop: '3px' },
+    roomArrow: { color: '#ddd', fontSize: '12px' },
 
-    chatWindow: { flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', backgroundColor: '#fff' },
+    chatWindow: { flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#fff' },
+    messageFadeIn: { animation: 'bubbleUp 0.3s ease-out' },
 
-    myMessageWrapper: { alignSelf: 'flex-end', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' },
-    otherMessageWrapper: { alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' },
+    myMessageWrapper: { alignSelf: 'flex-end', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', maxWidth: '85%' },
+    otherMessageWrapper: { alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '85%' },
+    myMessageRow: { display: 'flex', alignItems: 'flex-end', gap: '8px' },
+    otherMessageRow: { display: 'flex', alignItems: 'flex-end', gap: '8px' },
 
-    myMessageRow: { display: 'flex', alignItems: 'flex-end', gap: '6px' },
-    otherMessageRow: { display: 'flex', alignItems: 'flex-end', gap: '6px' },
+    author: { fontSize: '12px', color: '#888', fontWeight: '600', marginBottom: '5px', marginLeft: '4px' },
+    timeLabel: { fontSize: '10px', color: '#ccc', minWidth: '50px', textAlign: 'right' },
 
-    author: { fontSize: '12px', color: '#333', fontWeight: '500', marginBottom: '4px', marginLeft: '4px' },
-    timeLabel: { fontSize: '10px', color: '#aaa', marginBottom: '2px' },
+    myBubble: { padding: '12px 16px', backgroundColor: '#1a1a1a', color: '#fff', borderRadius: '20px 20px 4px 20px', fontSize: '14px', lineHeight: '1.5', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' },
+    otherBubble: { padding: '12px 16px', backgroundColor: '#f2f2f2', color: '#333', borderRadius: '20px 20px 20px 4px', fontSize: '14px', lineHeight: '1.5' },
 
-    myBubble: { padding: '10px 14px', backgroundColor: '#000', color: '#fff', borderRadius: '18px 18px 2px 18px', fontSize: '14px', maxWidth: '280px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
-    otherBubble: { padding: '10px 14px', backgroundColor: '#f0f0f0', color: '#333', borderRadius: '18px 18px 18px 2px', fontSize: '14px', maxWidth: '280px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
-
-    inputArea: { padding: '15px', display: 'flex', gap: '10px', borderTop: '1px solid #eee', backgroundColor: '#fff' },
-    chatInput: { flex: 1, padding: '12px 15px', borderRadius: '25px', border: '1px solid #eee', backgroundColor: '#f9f9f9', outline: 'none' },
-    sendButton: { padding: '10px 20px', color: '#000', border: 'none', background: 'none', fontWeight: 'bold', cursor: 'pointer' }
+    inputContainer: { padding: '20px', backgroundColor: '#fff' },
+    inputWrapper: { display: 'flex', alignItems: 'center', backgroundColor: '#f8f8f8', borderRadius: '25px', padding: '5px 5px 5px 20px', border: '1px solid #f0f0f0' },
+    chatInput: { flex: 1, border: 'none', backgroundColor: 'transparent', padding: '10px 0', fontSize: '14px' },
+    sendButton: { width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#1a1a1a', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.2s' },
+    sendIcon: { color: '#fff', fontSize: '14px', transform: 'rotate(0deg)' }
 };
 
 export default ChatPage;

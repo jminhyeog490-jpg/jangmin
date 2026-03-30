@@ -7,7 +7,6 @@ const BoardPage = () => {
     const [newPostTitle, setNewPostTitle] = useState('');
     const [newPostContent, setNewPostContent] = useState('');
     const [commentInputs, setCommentInputs] = useState({});
-    const [replyInputs, setReplyInputs] = useState({});
     const [activeReplyId, setActiveReplyId] = useState(null);
 
     // --- 무한 스크롤 상태 ---
@@ -19,15 +18,11 @@ const BoardPage = () => {
     const navigate = useNavigate();
     const currentUsername = localStorage.getItem('username');
 
-    // 게시글 불러오기 (pageNum 인자 추가)
     const fetchPosts = useCallback(async (pageNum) => {
-        if (loading || !hasMore) return;
+        if (loading) return;
         setLoading(true);
         try {
-            // 백엔드 Pageable 규격에 맞게 쿼리스트링 전달
             const response = await apiClient.get(`/api/posts/list?page=${pageNum}&size=10`);
-
-            // Spring Page 객체는 실제 데이터를 'content' 필드에 담아 보냅니다.
             const newData = response.data.content || response.data;
 
             if (!newData || newData.length === 0) {
@@ -40,14 +35,12 @@ const BoardPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [loading, hasMore]);
+    }, [loading]);
 
-    // 초기 로딩
     useEffect(() => {
         fetchPosts(0);
     }, []);
 
-    // 마지막 요소 감지용 Observer 설정
     const lastPostElementRef = useCallback(node => {
         if (loading) return;
         if (observer.current) observer.current.disconnect();
@@ -65,37 +58,22 @@ const BoardPage = () => {
         if (node) observer.current.observe(node);
     }, [loading, hasMore, fetchPosts]);
 
-    const handleBack = () => navigate('/main');
-
     const handleCreatePost = async () => {
         if (!newPostTitle || !newPostContent) return;
         try {
-            await apiClient.post('/api/posts/create', {
-                title: newPostTitle,
-                content: newPostContent,
-            });
-            setNewPostTitle('');
-            setNewPostContent('');
-            // 작성 후 초기화하고 첫 페이지부터 다시 로드
-            setPage(0);
-            setHasMore(true);
+            await apiClient.post('/api/posts/create', { title: newPostTitle, content: newPostContent });
+            setNewPostTitle(''); setNewPostContent('');
+            setPage(0); setHasMore(true);
             fetchPosts(0);
-        } catch (error) {
-            console.error('게시글 작성 실패:', error);
-        }
+        } catch (error) { console.error('게시글 작성 실패:', error); }
     };
 
     const handleDeletePost = async (postId) => {
-        if (!window.confirm("정말로 이 게시글을 삭제하시겠습니까?")) return;
+        if (!window.confirm("게시글을 삭제하시겠습니까?")) return;
         try {
             await apiClient.delete(`/api/posts/${postId}`);
-            alert("게시글이 삭제되었습니다.");
-            setPage(0);
-            setHasMore(true);
-            fetchPosts(0);
-        } catch (error) {
-            console.error('게시글 삭제 실패:', error);
-        }
+            setPage(0); setHasMore(true); fetchPosts(0);
+        } catch (error) { console.error('삭제 실패:', error); }
     };
 
     const handleAddComment = async (postId) => {
@@ -104,124 +82,171 @@ const BoardPage = () => {
         try {
             await apiClient.post(`/api/posts/${postId}/comments`, { content: commentText });
             setCommentInputs(prev => ({ ...prev, [postId]: '' }));
-            // 댓글 작성 후 상태 업데이트를 위해 해당 데이터만 다시 가져오거나 전체 리프레시
-            // 여기서는 단순함을 위해 첫 페이지 리프레시 처리
             setPage(0); setHasMore(true); fetchPosts(0);
-        } catch (error) {
-            console.error('댓글 작성 실패:', error);
-        }
+        } catch (error) { console.error('댓글 작성 실패:', error); }
     };
-
-    // ... (handleDeleteComment, handleAddReply 로직은 기존과 동일하므로 생략 가능하나 fetchPosts(0)로 갱신 필요)
 
     return (
         <div style={styles.container}>
+            {/* 상단 네비게이션 */}
             <div style={styles.navBar}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <button onClick={handleBack} style={styles.backButton}>〈</button>
-                    <div style={{ fontWeight: 'bold', fontSize: '18px' }}>📋 자유 게시판</div>
+                <button onClick={() => navigate('/main')} style={styles.backButton}>〈</button>
+                <div style={styles.navTitle}>Community</div>
+                <div style={{ width: '24px' }}></div>
+            </div>
+
+            {/* 글쓰기 영역 - 세련된 화이트 카드 타입 */}
+            <div style={styles.headerSection}>
+                <div style={styles.createCard}>
+                    <input
+                        type="text"
+                        placeholder="제목을 입력하세요"
+                        value={newPostTitle}
+                        onChange={(e) => setNewPostTitle(e.target.value)}
+                        style={styles.inputTitle}
+                    />
+                    <textarea
+                        placeholder="나누고 싶은 이야기가 있나요?"
+                        value={newPostContent}
+                        onChange={(e) => setNewPostContent(e.target.value)}
+                        style={styles.inputTextarea}
+                    />
+                    <div style={styles.createCardFooter}>
+                        <span style={styles.tipText}>매너 있는 게시판 문화를 만들어주세요.</span>
+                        <button onClick={handleCreatePost} style={styles.submitBtn}>등록하기</button>
+                    </div>
                 </div>
             </div>
 
-            <div style={styles.stickyHeader}>
-                <div style={styles.createForm}>
-                    <input type="text" placeholder="제목" value={newPostTitle} onChange={(e) => setNewPostTitle(e.target.value)} style={styles.input} />
-                    <textarea placeholder="내용을 입력하세요" value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} style={styles.textarea} />
-                    <button onClick={handleCreatePost} style={styles.button}>게시글 작성</button>
-                </div>
-            </div>
-
+            {/* 게시글 리스트 영역 */}
             <div style={styles.scrollArea}>
                 <div style={styles.postList}>
                     {posts.map((post, index) => {
-                        const isLastElement = posts.length === index + 1;
+                        const isLast = posts.length === index + 1;
                         return (
                             <div
                                 key={post.id}
-                                ref={isLastElement ? lastPostElementRef : null}
+                                ref={isLast ? lastPostElementRef : null}
                                 style={styles.postCard}
+                                className="post-card-ani"
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <h3 style={styles.postTitle}>{post.title}</h3>
+                                <div style={styles.postHeader}>
+                                    <div style={styles.authorBadge}>{post.authorName?.substring(0,1)}</div>
+                                    <div style={styles.postInfo}>
+                                        <div style={styles.postAuthorName}>{post.authorName}</div>
+                                        <div style={styles.postDate}>{new Date(post.createdAt).toLocaleDateString()}</div>
+                                    </div>
                                     {post.authorName === currentUsername && (
                                         <button onClick={() => handleDeletePost(post.id)} style={styles.deleteBtn}>삭제</button>
                                     )}
                                 </div>
-                                <p style={styles.postContent}>{post.content}</p>
-                                <div style={styles.postMeta}>
-                                    작성자: {post.authorName} | {new Date(post.createdAt).toLocaleDateString()}
-                                </div>
 
-                                {/* 댓글 영역 (기존 로직 유지) */}
-                                <div style={styles.commentSection}>
-                                    <h4 style={{fontSize: '14px', marginBottom: '10px'}}>댓글 ({post.comments ? post.comments.length : 0})</h4>
-                                    {post.comments && post.comments
-                                        .filter(comment => !comment.parentId)
-                                        .map(comment => (
+                                <h3 style={styles.postTitleText}>{post.title}</h3>
+                                <p style={styles.postContentText}>{post.content}</p>
+
+                                <div style={styles.commentContainer}>
+                                    <div style={styles.commentHeader}>
+                                        <span>댓글 {post.comments?.length || 0}</span>
+                                    </div>
+
+                                    {/* 댓글 리스트 */}
+                                    <div style={styles.commentList}>
+                                        {post.comments?.slice(0, 3).map(comment => (
                                             <div key={comment.id} style={styles.commentItem}>
-                                                <div style={styles.commentMain}>
-                                                    <div>
-                                                        <span style={{fontWeight: 'bold', marginRight: '5px'}}>{comment.authorName}</span>
-                                                        <span>{comment.content}</span>
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                        <button style={styles.replyButton} onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)}>
-                                                            {activeReplyId === comment.id ? '취소' : '답글'}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                {/* 답글 리스트 및 입력창 로직 동일 */}
+                                                <span style={styles.commentAuthor}>{comment.authorName}</span>
+                                                <span style={styles.commentContent}>{comment.content}</span>
                                             </div>
-                                        ))
-                                    }
-                                    <input
-                                        type="text"
-                                        placeholder="댓글 입력 후 엔터..."
-                                        value={commentInputs[post.id] || ''}
-                                        onChange={(e) => setCommentInputs({...commentInputs, [post.id]: e.target.value})}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
-                                        style={styles.commentInput}
-                                    />
+                                        ))}
+                                    </div>
+
+                                    <div style={styles.commentInputWrapper}>
+                                        <input
+                                            type="text"
+                                            placeholder="댓글을 남겨보세요..."
+                                            value={commentInputs[post.id] || ''}
+                                            onChange={(e) => setCommentInputs({...commentInputs, [post.id]: e.target.value})}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                                            style={styles.commentInput}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         );
                     })}
 
-                    {loading && <p style={styles.loadingText}>데이터를 가져오는 중...</p>}
-                    {!hasMore && posts.length > 0 && <p style={styles.endMessage}>모든 게시글을 불러왔습니다.</p>}
-                    {posts.length === 0 && !loading && <p style={{textAlign: 'center', color: '#999', marginTop: '40px'}}>등록된 게시글이 없습니다.</p>}
+                    {loading && <div style={styles.loadingPulse}>포스트를 불러오는 중...</div>}
+                    {!hasMore && <div style={styles.endMessage}>마지막 페이지입니다.</div>}
                 </div>
             </div>
+
+            <style>{`
+                .post-card-ani { animation: slideUp 0.5s ease-out; }
+                @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                input:focus, textarea:focus { outline: none; border-color: #1a1a1a !important; }
+            `}</style>
         </div>
     );
 };
 
 const styles = {
-    // ... 기존 스타일 그대로 유지 ...
-    container: { height: '100vh', display: 'flex', flexDirection: 'column', maxWidth: '800px', margin: '0 auto', backgroundColor: '#fff', position: 'relative' },
-    navBar: { height: '60px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', backgroundColor: '#fff', flexShrink: 0 },
-    backButton: { backgroundColor: 'transparent', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#333', fontWeight: 'bold' },
-    stickyHeader: { padding: '15px 20px', backgroundColor: '#fff', borderBottom: '1px solid #eee', zIndex: 10 },
-    createForm: { padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '12px' },
-    scrollArea: { flex: 1, overflowY: 'auto', padding: '20px' },
-    input: { width: '100%', padding: '12px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', fontSize: '14px' },
-    textarea: { width: '100%', padding: '12px', height: '80px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', fontSize: '14px', resize: 'none' },
-    button: { width: '100%', padding: '12px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-    postList: { display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' },
-    postCard: { padding: '20px', border: '1px solid #eee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' },
-    postTitle: { margin: '0 0 10px 0', fontSize: '18px' },
-    postContent: { whiteSpace: 'pre-wrap', color: '#444', fontSize: '15px', lineHeight: '1.5' },
-    postMeta: { fontSize: '12px', color: '#999', marginTop: '12px' },
-    commentSection: { marginTop: '15px', borderTop: '1px solid #f0f0f0', paddingTop: '15px' },
-    commentItem: { padding: '10px 0', borderBottom: '1px solid #fcfcfc' },
-    commentMain: { display: 'flex', justifyContent: 'space-between', fontSize: '14px', alignItems: 'flex-start' },
-    replyButton: { border: 'none', background: 'none', color: '#4285F4', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
-    commentInput: { width: '100%', padding: '12px', marginTop: '15px', boxSizing: 'border-box', border: '1px solid #eee', borderRadius: '8px', backgroundColor: '#f9f9f9', fontSize: '14px' },
-    deleteBtn: { padding: '4px 8px', backgroundColor: '#fff', color: '#ff4d4f', border: '1px solid #ff4d4f', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', transition: 'all 0.2s' },
+    container: { height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fa' },
+    navBar: {
+        height: '60px', backgroundColor: '#fff', borderBottom: '1px solid #f0f0f0',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', flexShrink: 0
+    },
+    backButton: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#1a1a1a' },
+    navTitle: { fontSize: '18px', fontWeight: '800', color: '#1a1a1a', letterSpacing: '-0.5px' },
 
-    // 추가된 스타일
-    loadingText: { textAlign: 'center', color: '#4285F4', margin: '20px 0' },
-    endMessage: { textAlign: 'center', color: '#999', fontSize: '13px', margin: '20px 0' }
+    headerSection: { padding: '20px', backgroundColor: '#fff', borderBottom: '1px solid #f0f0f0' },
+    createCard: { maxWidth: '700px', margin: '0 auto', backgroundColor: '#fff' },
+    inputTitle: {
+        width: '100%', padding: '10px 0', fontSize: '18px', fontWeight: '700',
+        border: 'none', borderBottom: '1px solid #eee', marginBottom: '12px'
+    },
+    inputTextarea: {
+        width: '100%', height: '80px', padding: '10px 0', fontSize: '15px',
+        border: 'none', resize: 'none', color: '#444'
+    },
+    createCardFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' },
+    tipText: { fontSize: '12px', color: '#aaa' },
+    submitBtn: {
+        backgroundColor: '#1a1a1a', color: '#fff', border: 'none',
+        padding: '10px 24px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer'
+    },
+
+    scrollArea: { flex: 1, overflowY: 'auto', padding: '20px' },
+    postList: { maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' },
+    postCard: {
+        backgroundColor: '#fff', borderRadius: '20px', padding: '25px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f1f1f1'
+    },
+    postHeader: { display: 'flex', alignItems: 'center', marginBottom: '18px' },
+    authorBadge: {
+        width: '40px', height: '40px', backgroundColor: '#f0f0f0', borderRadius: '14px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#555'
+    },
+    postInfo: { flex: 1, marginLeft: '12px' },
+    postAuthorName: { fontSize: '15px', fontWeight: '700', color: '#1a1a1a' },
+    postDate: { fontSize: '12px', color: '#bbb', marginTop: '2px' },
+    deleteBtn: { background: 'none', border: 'none', color: '#ff4d4f', fontSize: '13px', cursor: 'pointer', fontWeight: '600' },
+
+    postTitleText: { fontSize: '20px', fontWeight: '800', color: '#1a1a1a', marginBottom: '12px', letterSpacing: '-0.5px' },
+    postContentText: { fontSize: '16px', lineHeight: '1.6', color: '#444', marginBottom: '20px', whiteSpace: 'pre-wrap' },
+
+    commentContainer: { backgroundColor: '#f9f9f9', borderRadius: '14px', padding: '15px' },
+    commentHeader: { fontSize: '13px', fontWeight: '700', color: '#666', marginBottom: '10px' },
+    commentList: { display: 'flex', flexDirection: 'column', gap: '8px' },
+    commentItem: { fontSize: '14px', display: 'flex', gap: '8px' },
+    commentAuthor: { fontWeight: '700', color: '#333', minWidth: 'max-content' },
+    commentContent: { color: '#555' },
+    commentInputWrapper: { marginTop: '15px' },
+    commentInput: {
+        width: '100%', padding: '12px 16px', borderRadius: '10px',
+        border: '1px solid #eee', fontSize: '14px', boxSizing: 'border-box'
+    },
+
+    loadingPulse: { textAlign: 'center', padding: '20px', color: '#1a1a1a', fontWeight: '600', opacity: 0.6 },
+    endMessage: { textAlign: 'center', padding: '20px', color: '#bbb', fontSize: '14px' }
 };
 
 export default BoardPage;
