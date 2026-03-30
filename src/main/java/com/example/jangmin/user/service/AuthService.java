@@ -1,3 +1,18 @@
+package com.example.jangmin.user.service;
+
+import com.example.jangmin.global.jwt.*;
+import com.example.jangmin.redis.RedisService;
+import com.example.jangmin.user.domain.User;
+import com.example.jangmin.user.dto.LoginRequestDto;
+import com.example.jangmin.user.repository.UserRepository;
+import io.jsonwebtoken.Claims;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -29,8 +44,6 @@ public class AuthService {
         String existingToken = redisService.getValues("AT:" + username);
 
         if (existingToken != null) {
-            // 이미 로그인된 상태라면 여기서 예외를 던져 로그인을 중단시킵니다.
-            // 프론트엔드에서 이 메시지를 받아 alert()를 띄우게 됩니다.
             throw new IllegalStateException("이미 다른 기기 또는 브라우저에서 로그인 중입니다. 기존 세션을 로그아웃한 후 다시 시도해주세요.");
         }
 
@@ -39,14 +52,12 @@ public class AuthService {
         String refreshToken = jwtUtil.createRefreshToken(username);
 
         // 5. Redis 저장
-        // RefreshToken 저장 (유저 식별자 기준)
         redisService.setValues(
                 username,
                 refreshToken,
                 Duration.ofMillis(jwtUtil.getRefreshTokenTimeToLive())
         );
 
-        // AccessToken 저장 (중복 체크용 키 "AT:username")
         redisService.setValues(
                 "AT:" + username,
                 accessToken,
@@ -57,17 +68,16 @@ public class AuthService {
                 .grantType(JwtUtil.BEARER_PREFIX)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .accessTokenExpiresIn(1000L * 60 * 30) // 30분
+                .accessTokenExpiresIn(1000L * 60 * 30)
                 .userId(user.getId())
                 .build();
     }
 
     /**
-     * ✅ 로그아웃 (Redis 세션 삭제 및 블랙리스트 등록)
+     * ✅ 로그아웃
      */
     @Transactional
     public void logout(String accessToken) {
-        // Bearer 접두사 제거
         if (accessToken.startsWith("Bearer ")) {
             accessToken = accessToken.substring(7).trim();
         }
@@ -79,15 +89,11 @@ public class AuthService {
         Claims claims = jwtUtil.getUserInfoFromToken(accessToken);
         String username = claims.getSubject();
 
-        // 1. AccessToken 중복 체크용 키 삭제 (이제 다른 곳에서 로그인 가능해짐)
         redisService.deleteValues("AT:" + username);
-
-        // 2. RefreshToken 삭제
         redisService.deleteValues(username);
 
-        // 3. 블랙리스트 등록 (남은 유효시간만큼)
         long expiration = claims.getExpiration().getTime() - System.currentTimeMillis();
-        expiration = Math.max(expiration, 1000 * 60 * 5); // 최소 5분 보장
+        expiration = Math.max(expiration, 1000 * 60 * 5);
 
         redisService.setBlackList(
                 "blacklist:" + accessToken,
@@ -115,13 +121,11 @@ public class AuthService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
-        // Redis에 저장된 RT와 비교
         String storedRefreshToken = redisService.getValues(username);
         if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
             throw new IllegalArgumentException("세션이 만료되었습니다. 다시 로그인해주세요.");
         }
 
-        // 새로운 AccessToken 생성 및 Redis 갱신
         String newAccessToken = jwtUtil.createToken(username, user.getRole().name());
         redisService.setValues(
                 "AT:" + username,
