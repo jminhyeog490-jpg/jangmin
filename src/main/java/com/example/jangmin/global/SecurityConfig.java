@@ -61,7 +61,7 @@ public class SecurityConfig {
                                 "/api/auth/**", "/api/v1/auth/**", "/api/v1/ai/**",
                                 "/api/users/signup", "/api/auth/login", "/swagger-ui/**",
                                 "/v3/api-docs/**", "/email-send/**", "/api/v1/landmarks/**",
-                                "/ws-chat/**", "/api/posts/**"
+                                "/ws-chat/**", "/api/posts/**","/api/chat/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

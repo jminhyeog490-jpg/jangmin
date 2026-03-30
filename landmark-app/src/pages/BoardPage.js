@@ -15,16 +15,17 @@ const BoardPage = () => {
     const observer = useRef();
 
     const navigate = useNavigate();
-    // ✅ 'username' 키값 확인
+
+    // ✅ 설정: 토큰 키값과 유저네임 키값 확인
+    const tokenKey = 'accessToken';
     const currentUsername = localStorage.getItem('username');
 
-    // 1️⃣ 게시글 가져오기 함수 (isRefresh 인자 추가)
+    // 1️⃣ 게시글 가져오기 함수
     const fetchPosts = useCallback(async (pageNum, isRefresh = false) => {
         if (loading && !isRefresh) return;
         setLoading(true);
         try {
             const response = await apiClient.get(`/api/posts/list?page=${pageNum}&size=10`);
-            // 백엔드 Page 객체 구조에 맞춰 content 추출
             const newData = response.data.content || response.data;
 
             if (!newData || newData.length === 0) {
@@ -36,18 +37,15 @@ const BoardPage = () => {
             }
         } catch (error) {
             console.error('목록 불러오기 실패:', error);
-            // 401 에러는 api.js 인터셉터에서 처리하지만, 여기서도 안전하게 예외처리 가능
         } finally {
             setLoading(false);
         }
     }, [loading]);
 
-    // 초기 로드
     useEffect(() => {
         fetchPosts(0, true);
     }, []);
 
-    // 무한 스크롤 감지
     const lastPostElementRef = useCallback(node => {
         if (loading) return;
         if (observer.current) observer.current.disconnect();
@@ -65,33 +63,48 @@ const BoardPage = () => {
         if (node) observer.current.observe(node);
     }, [loading, hasMore, fetchPosts]);
 
-    // 2️⃣ 게시글 등록
+    // 2️⃣ 게시글 등록 (인증 헤더 추가)
     const handleCreatePost = async () => {
         if (!newPostTitle.trim() || !newPostContent.trim()) {
             alert("제목과 내용을 입력해주세요.");
             return;
         }
+
+        const token = localStorage.getItem(tokenKey);
+        if (!token) {
+            alert("로그인이 필요합니다.");
+            navigate('/login');
+            return;
+        }
+
         try {
-            await apiClient.post('/api/posts/create', {
-                title: newPostTitle,
-                content: newPostContent
-            });
+            await apiClient.post('/api/posts/create',
+                { title: newPostTitle, content: newPostContent },
+                { headers: { Authorization: `Bearer ${token}` } } // ✅ 토큰 전송
+            );
             setNewPostTitle('');
             setNewPostContent('');
             setPage(0);
             setHasMore(true);
-            // ✅ 등록 후 즉시 첫 페이지 강제 새로고침
             fetchPosts(0, true);
         } catch (error) {
             console.error('게시글 작성 실패:', error);
+            if (error.response?.status === 403 || error.response?.status === 401) {
+                alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+                navigate('/login');
+            }
         }
     };
 
-    // 3️⃣ 게시글 삭제
+    // 3️⃣ 게시글 삭제 (인증 헤더 추가)
     const handleDeletePost = async (postId) => {
         if (!window.confirm("게시글을 삭제하시겠습니까?")) return;
+
+        const token = localStorage.getItem(tokenKey);
         try {
-            await apiClient.delete(`/api/posts/${postId}`);
+            await apiClient.delete(`/api/posts/${postId}`, {
+                headers: { Authorization: `Bearer ${token}` } // ✅ 토큰 전송
+            });
             setPage(0);
             setHasMore(true);
             fetchPosts(0, true);
@@ -100,19 +113,29 @@ const BoardPage = () => {
         }
     };
 
-    // 4️⃣ 댓글 등록
+    // 4️⃣ 댓글 등록 (인증 헤더 추가)
     const handleAddComment = async (postId) => {
         const commentText = commentInputs[postId];
         if (!commentText?.trim()) return;
+
+        const token = localStorage.getItem(tokenKey);
+        if (!token) {
+            alert("로그인이 필요합니다.");
+            return;
+        }
+
         try {
-            await apiClient.post(`/api/posts/${postId}/comments`, {
-                content: commentText
-            });
+            await apiClient.post(`/api/posts/${postId}/comments`,
+                { content: commentText },
+                { headers: { Authorization: `Bearer ${token}` } } // ✅ 토큰 전송
+            );
             setCommentInputs(prev => ({ ...prev, [postId]: '' }));
-            // ✅ 댓글 등록 후 목록 최신화
             fetchPosts(0, true);
         } catch (error) {
             console.error('댓글 작성 실패:', error);
+            if (error.response?.status === 403 || error.response?.status === 401) {
+                alert("세션이 만료되었습니다.");
+            }
         }
     };
 
@@ -152,7 +175,7 @@ const BoardPage = () => {
                         const isLast = posts.length === index + 1;
                         return (
                             <div
-                                key={`${post.id}-${index}`} // 고유 키 보강
+                                key={`${post.id}-${index}`}
                                 ref={isLast ? lastPostElementRef : null}
                                 style={styles.postCard}
                                 className="post-card-ani"
@@ -216,7 +239,6 @@ const BoardPage = () => {
     );
 };
 
-// 스타일 객체 (기존 유지)
 const styles = {
     container: { height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fa' },
     navBar: { height: '60px', backgroundColor: '#fff', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', flexShrink: 0 },
